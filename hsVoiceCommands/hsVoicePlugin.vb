@@ -21,7 +21,6 @@ Public Class hsVoicePlugin
 ByVal lpString As System.Text.StringBuilder,
 ByVal cch As Integer) As Integer
 
-    Public WithEvents timerResetStatus As Timer
     Public lastCommand As New String("none")
 
     Const MOUSEEVENTF_LEFTDOWN As UInteger = &H2
@@ -40,6 +39,9 @@ ByVal cch As Integer) As Integer
     Public WithEvents recogWorker As New BackgroundWorker
 
     Public hdtStatus As HearthstoneTextBlock
+
+    Public voiceLog As New IO.StreamWriter("hdtvlog.txt")
+
 
     Public handCards, boardOpponent, boardFriendly As New List(Of Entity)
     Public playerID, opponentID As Integer
@@ -71,15 +73,18 @@ ByVal cch As Integer) As Integer
         End Get
     End Property
     Public Sub Load()
-        ' Initialize speech recogition object
-        hsRecog = New SpeechRecognitionEngine
-        hsRecog.SetInputToDefaultAudioDevice()
-        hsRecog.BabbleTimeout = New TimeSpan(0, 0, 5)
-        hsRecog.InitialSilenceTimeout = New TimeSpan(0, 0, 5)
-
-        timerResetStatus = New Timer
-        timerResetStatus.Enabled = True
-        timerResetStatus.Interval = 2000
+        writeLog("HDT-Voice running on " & My.Computer.Info.OSFullName)
+        writeLog("Initializing speech recognition object")
+        Try
+            ' Initialize speech recogition object
+            hsRecog = New SpeechRecognitionEngine
+            hsRecog.SetInputToDefaultAudioDevice()
+            hsRecog.BabbleTimeout = New TimeSpan(0, 0, 5)
+            hsRecog.InitialSilenceTimeout = New TimeSpan(0, 0, 5)
+        Catch ex As Exception
+            writeLog("Error: " & ex.Message)
+        End Try
+        writeLog("Successfuly started speech recognition")
 
         'Initialize values
         playerID = 0
@@ -97,6 +102,7 @@ ByVal cch As Integer) As Integer
 
         overlayCanvas.Children.Add(hdtStatus)
 
+        writeLog("Attaching event handlers...")
         'Add event handlers
         GameEvents.OnGameStart.Add(New Action(AddressOf onNewGame))
         GameEvents.OnPlayerMulligan.Add(New Action(Of Card)(AddressOf onMulligan))
@@ -106,7 +112,9 @@ ByVal cch As Integer) As Integer
         recogWorker.RunWorkerAsync()
 
     End Sub
+
     Public Sub onNewGame()
+        writeLog("New Game detected")
         ' Initialize controller IDs
         playerID = Nothing
         opponentID = Nothing
@@ -117,23 +125,31 @@ ByVal cch As Integer) As Integer
         If Not IsNothing(OpponentEntity) Then _
                 opponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
     End Sub
+
     Public Sub onMulligan(Optional c As Card = Nothing)
         mulliganDone = True
     End Sub
     Public Sub onSpeechRecognized(sender As Object, e As SpeechRecognizedEventArgs) Handles hsRecog.SpeechRecognized
 
-        If Not checkActiveWindow() Then Return
+        If Not checkActiveWindow() Then
+            writeLog("Heard command """ & e.Result.Text & """ but Hearthstone was inactive")
+            Return
+        End If
 
         'If below preset confidence threshold then exit
-        If e.Result.Confidence < My.Settings.Threshold / 100 Then Return
+        If e.Result.Confidence < My.Settings.Threshold / 100 Then
+            writeLog("Heard command """ & e.Result.Text & """ but it was below the recognition threshold")
+            Return
+        End If
 
         rebuildCardData()
         UpdateStatus("Executing """ & e.Result.Text & """...")
+        writeLog("Command recognized """ & e.Result.Text & """ - executing action")
 
         If e.Result.Semantics.ContainsKey("action") Then
             Select Case e.Result.Semantics("action").Value
-                Case "focus"
-                    doFocus(e)
+                Case "target"
+                    doTarget(e)
 
                 Case "click"
                     doClick(e)
@@ -142,7 +158,10 @@ ByVal cch As Integer) As Integer
                     doMulligan(e)
 
                 Case "play" 'play a card
-                    doPlay(e)
+                    doPlayMinion(e)
+
+                Case "cast" 'play a card
+                    doCastSpell(e)
 
                 Case "attack" 'Attack with minion
                     doAttack(e)
@@ -222,7 +241,7 @@ ByVal cch As Integer) As Integer
     End Sub
 
     Private Sub doClick(e As SpeechRecognizedEventArgs)
-        If e.Result.Semantics.ContainsKey("heropower") Then 'focus hero or hero power
+        If e.Result.Semantics.ContainsKey("heropower") Then 'target hero or hero power
             Dim x, y
             If e.Result.Semantics("herotarget").Value = "friendly" Then y = 80 Else y = 20
             If e.Result.Semantics("heropower").Value = "hero" Then x = 50 Else x = 60
@@ -241,11 +260,6 @@ ByVal cch As Integer) As Integer
             moveCursorToTarget(targetName)
         End If
         sendLeftClick()
-    End Sub
-
-    Private Sub onResetStatus() Handles timerResetStatus.Tick
-        UpdateStatus("Listening...")
-        timerResetStatus.Enabled = False
     End Sub
     Private Sub doMenu(e As SpeechRecognizedEventArgs)
         Select Case e.Result.Semantics("menu").Value
@@ -352,7 +366,7 @@ ByVal cch As Integer) As Integer
             endDrag()
         End If
     End Sub 'handle attacking
-    Private Sub doPlay(e As SpeechRecognizedEventArgs)
+    Private Sub doPlayMinion(e As SpeechRecognizedEventArgs)
         If e.Result.Semantics.ContainsKey("friendly") Then 'play to friendly target
             Dim cardName = e.Result.Semantics("card").Value
             Dim targetName = e.Result.Semantics("friendly").Value
@@ -374,7 +388,31 @@ ByVal cch As Integer) As Integer
             endDrag()
 
         End If
-    End Sub 'handle playing cards
+    End Sub 'handle playing minion cards
+    Private Sub doCastSpell(e As SpeechRecognizedEventArgs)
+        If e.Result.Semantics.ContainsKey("friendly") Then 'play to friendly target
+            Dim cardName = e.Result.Semantics("card").Value
+            Dim targetName = e.Result.Semantics("friendly").Value
+            Dim targetnum = targetName.ToString.Substring(1)
+            Dim newname = "f" & targetnum
+
+            dragTargetToTarget(cardName, newname)
+
+        ElseIf e.Result.Semantics.ContainsKey("opposing") Then 'play to opposing target
+            Dim cardName = e.Result.Semantics("card").Value
+            Dim targetName = e.Result.Semantics("opposing").Value
+            dragTargetToTarget(cardName, targetName)
+
+        Else
+            Dim cardName = e.Result.Semantics("card").Value 'play to board
+            moveCursorToTarget(cardName)
+            startDrag()
+            moveCursor(85, 55)
+            endDrag()
+
+        End If
+    End Sub 'handle playing spell cards
+
     Private Sub doMulligan(e As SpeechRecognizedEventArgs)
         If e.Result.Semantics.ContainsKey("card") Then
             Dim targetName = e.Result.Semantics("card").Value
@@ -392,8 +430,8 @@ ByVal cch As Integer) As Integer
             sendLeftClick()
         End If
     End Sub 'handle mulligan
-    Private Sub doFocus(e As SpeechRecognizedEventArgs)
-        If e.Result.Semantics.ContainsKey("heropower") Then 'focus hero or hero power
+    Private Sub doTarget(e As SpeechRecognizedEventArgs)
+        If e.Result.Semantics.ContainsKey("heropower") Then 'target hero or hero power
             Dim x, y
             If e.Result.Semantics("herotarget").Value = "friendly" Then y = 80 Else y = 20
             If e.Result.Semantics("heropower").Value = "hero" Then x = 50 Else x = 60
@@ -411,7 +449,7 @@ ByVal cch As Integer) As Integer
             Dim targetName = e.Result.Semantics("opposing").Value
             moveCursorToTarget(targetName)
         End If
-    End Sub 'handle focusing cursor
+    End Sub 'handle targeting cursor
     Public Sub sendLeftClick()
         mouse_event(MOUSEEVENTF_LEFTDOWN, Cursor.Position.X, Cursor.Position.Y, 0, 0)
         Sleep(50)
@@ -444,6 +482,7 @@ ByVal cch As Integer) As Integer
         moveCursor(optionStart + myOption, 50)
     End Sub
     Public Sub moveCursorToTarget(TargetName As String)
+        rebuildCardData()
         'Reads a target returned by the speech recognition semantic key
         Select Case TargetName.Substring(0, 1)
             Case "c" ' Target is a card
@@ -515,9 +554,9 @@ ByVal cch As Integer) As Integer
                 System.Threading.Thread.Sleep(1000)
             Else
                 UpdateStatus("Listening...")
-
                 hsRecog.UnloadAllGrammars()
                 hsRecog.LoadGrammar(buildGrammar)
+                writeLog("Waiting for user input")
                 hsRecog.Recognize()
             End If
 
@@ -539,9 +578,9 @@ ByVal cch As Integer) As Integer
 
     End Sub
     Public Function buildGrammar() As Grammar
-        Debug.WriteLine("Building grammar")
 
         If Game.IsInMenu Then
+            writeLog("IsInMenu=True - Building menu grammar")
             Dim menuGrammar As New GrammarBuilder
             Dim menuChoices As New Choices
 
@@ -568,7 +607,7 @@ ByVal cch As Integer) As Integer
             deckGrammar.Append(deckChoices)
             menuChoices.Add(deckGrammar)
             menuGrammar.Append(menuChoices)
-
+            writeLog("Grammar building complete")
             Return New Grammar(menuGrammar)
         End If
 
@@ -657,6 +696,7 @@ ByVal cch As Integer) As Integer
 
         ' Check if we're at the mulligan, if so only the mulligan grammar will be returned
         If (Not mulliganDone) And (Not Game.IsMulliganDone) Then
+            writeLog("IsMulliganDone=True - Building mulligan grammar")
             Dim mulliganBuilder As New GrammarBuilder
             mulliganBuilder.Append(New SemanticResultKey("action", New SemanticResultValue("click", "mulligan")))
             Dim mulliganChoices As New Choices
@@ -665,23 +705,33 @@ ByVal cch As Integer) As Integer
             mulliganBuilder.Append(New Choices(mulliganChoices, "confirm"))
 
             finalChoices.Add(mulliganBuilder)
+            writeLog("Grammar building complete")
             Return New Grammar(New GrammarBuilder(finalChoices))
         End If
 
+        writeLog("Started building game grammar")
+
         'build grammar for card actions
         If cardGrammar.DebugShowPhrases.Count Then
-            'focus card
-            Dim focusCards As New GrammarBuilder
-            focusCards.Append(New SemanticResultKey("action", "focus"))
-            focusCards.Append("card")
-            focusCards.Append(cardGrammar)
+            'target card
+            Dim targetCards As New GrammarBuilder
+            targetCards.Append(New SemanticResultKey("action", "target"))
+            targetCards.Append("card")
+            targetCards.Append(cardGrammar)
+            finalChoices.Add(targetCards)
 
             'play card with no target
             Dim playCards As New GrammarBuilder
             playCards.Append(New SemanticResultKey("action", "play"))
             playCards.Append(cardGrammar)
+            finalChoices.Add(playCards)
 
-            'play card with friendly target
+            Dim castCards As New GrammarBuilder
+            castCards.Append(New SemanticResultKey("action", "cast"))
+            castCards.Append(cardGrammar)
+            finalChoices.Add(castCards)
+
+            'play card to the left of friendly target
             If friendlyGrammar.DebugShowPhrases.Count Then
                 Dim playToFriendly As New GrammarBuilder
                 playToFriendly.Append(New SemanticResultKey("action", "play"))
@@ -693,42 +743,42 @@ ByVal cch As Integer) As Integer
                 finalChoices.Add(playToFriendly)
             End If
 
+            'cast spell card on friendly target
+            If friendlyGrammar.DebugShowPhrases.Count Then
+                Dim castOnFriendly As New GrammarBuilder
+                castOnFriendly.Append(New SemanticResultKey("action", "cast"))
+                castOnFriendly.Append(cardGrammar)
+                castOnFriendly.Append("on")
+                castOnFriendly.Append(friendlyNames)
+                castOnFriendly.Append(friendlyGrammar)
+
+                finalChoices.Add(castOnFriendly)
+            End If
+
             'play card to opposing target
             If opposingGrammar.DebugShowPhrases.Count Then
                 Dim playToOpposing As New GrammarBuilder
-                playToOpposing.Append(New SemanticResultKey("action", "play"))
+                playToOpposing.Append(New SemanticResultKey("action", "cast"))
                 playToOpposing.Append(cardGrammar)
-                playToOpposing.Append("to")
+                playToOpposing.Append("on")
                 playToOpposing.Append(opposingNames)
                 playToOpposing.Append(opposingGrammar)
 
                 finalChoices.Add(playToOpposing)
             End If
 
-            'play card to position
-            Dim playToPosition As New GrammarBuilder
-            playToPosition.Append(New SemanticResultKey("action", "play"))
-            playToPosition.Append(cardGrammar)
-            playToPosition.Append("to position")
-            Dim posNumbers As New Choices
-            For i = 1 To boardFriendly.Count + 1
-                posNumbers.Add(i.ToString)
-            Next
-            playToPosition.Append(posNumbers)
 
-            finalChoices.Add(playToPosition)
-            finalChoices.Add(playCards)
-            finalChoices.Add(focusCards)
+
         End If
 
         'build grammar friendly minion actions
         If friendlyGrammar.DebugShowPhrases.Count Then
-            'focus friendly minion
-            Dim focusFriendly As New GrammarBuilder
-            focusFriendly.Append(New SemanticResultKey("action", "focus"))
-            focusFriendly.Append(friendlyNames)
-            focusFriendly.Append(friendlyGrammar)
-            finalChoices.Add(focusFriendly)
+            'target friendly minion
+            Dim targetFriendly As New GrammarBuilder
+            targetFriendly.Append(New SemanticResultKey("action", "target"))
+            targetFriendly.Append(friendlyNames)
+            targetFriendly.Append(friendlyGrammar)
+            finalChoices.Add(targetFriendly)
 
             'attack target with friendly minion
             Dim attackFriendly As New GrammarBuilder
@@ -737,6 +787,13 @@ ByVal cch As Integer) As Integer
             attackFriendly.Append("with")
             attackFriendly.Append(friendlyGrammar)
             finalChoices.Add(attackFriendly)
+
+            'SHORTCUT attack target with minion
+            Dim goTarget As New GrammarBuilder
+            goTarget.Append(friendlyGrammar)
+            goTarget.Append(New SemanticResultKey("action", New SemanticResultValue("go", "attack")))
+            goTarget.Append(opposingGrammar)
+            finalChoices.Add(goTarget)
 
             'use hero power on friendly target
             Dim heroFriendly As New GrammarBuilder
@@ -758,11 +815,11 @@ ByVal cch As Integer) As Integer
         End If
 
         If opposingGrammar.DebugShowPhrases.Count Then
-            Dim focusOpposing As New GrammarBuilder
-            focusOpposing.Append(New SemanticResultKey("action", "focus"))
-            focusOpposing.Append(opposingNames)
-            focusOpposing.Append(opposingGrammar)
-            finalChoices.Add(focusOpposing)
+            Dim targetOpposing As New GrammarBuilder
+            targetOpposing.Append(New SemanticResultKey("action", "target"))
+            targetOpposing.Append(opposingNames)
+            targetOpposing.Append(opposingGrammar)
+            finalChoices.Add(targetOpposing)
 
             Dim heroOpposing As New GrammarBuilder
             heroOpposing.Append("use")
@@ -795,12 +852,15 @@ ByVal cch As Integer) As Integer
         sayEmote.Append(New SemanticResultKey("action", "say"))
         Dim sayChoices As New Choices
         sayChoices.Add(New SemanticResultValue("thanks", "thanks"))
+        sayChoices.Add(New SemanticResultValue("thank you", "thanks"))
         sayChoices.Add(New SemanticResultValue("well played", "well played"))
         sayChoices.Add(New SemanticResultValue("greetings", "greetings"))
+        sayChoices.Add(New SemanticResultValue("hello", "greetings"))
         sayChoices.Add(New SemanticResultValue("sorry", "sorry"))
         sayChoices.Add(New SemanticResultValue("oops", "oops"))
+        sayChoices.Add(New SemanticResultValue("whoops", "oops"))
         sayChoices.Add(New SemanticResultValue("threaten", "threaten"))
-        sayEmote.append(New SemanticResultKey("emote", sayChoices))
+        sayEmote.Append(New SemanticResultKey("emote", sayChoices))
         finalChoices.Add(sayEmote)
 
         Dim chooseOption As New GrammarBuilder
@@ -810,7 +870,7 @@ ByVal cch As Integer) As Integer
             optionChoices.Add(optMax.ToString)
         Next
 
-            chooseOption.Append(New SemanticResultKey("action", "choose"))
+        chooseOption.Append(New SemanticResultKey("action", "choose"))
         chooseOption.Append("option")
         chooseOption.Append(New SemanticResultKey("option", optionChoices))
         chooseOption.Append("of")
@@ -819,6 +879,8 @@ ByVal cch As Integer) As Integer
 
         finalChoices.Add(New SemanticResultKey("action", "click"))
         finalChoices.Add(New SemanticResultKey("action", "cancel"))
+
+        writeLog("Grammar building complete")
 
         Try
             Return New Grammar(New GrammarBuilder(finalChoices))
@@ -866,4 +928,11 @@ ByVal cch As Integer) As Integer
                                Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
                            End Function)
     End Sub 'rebuilds data for cards in hand and on board
+    Public Sub writeLog(Line As String)
+        Debug.WriteLine(Line)
+        If My.Settings.outputDebug Then
+            voiceLog.WriteLine(Line)
+            voiceLog.Flush()
+        End If
+    End Sub
 End Class
