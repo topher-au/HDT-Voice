@@ -89,6 +89,54 @@ Namespace My
                 Me("outputDebug") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
+        Public Property showStatusText() As Boolean
+            Get
+                Return CType(Me("showStatusText"),Boolean)
+            End Get
+            Set
+                Me("showStatusText") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
+        Public Property showStatusLight() As Boolean
+            Get
+                Return CType(Me("showStatusLight"),Boolean)
+            End Get
+            Set
+                Me("showStatusLight") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("0")>  _
+        Public Property statusTextPos() As Integer
+            Get
+                Return CType(Me("statusTextPos"),Integer)
+            End Get
+            Set
+                Me("statusTextPos") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
+        Public Property quickPlay() As Boolean
+            Get
+                Return CType(Me("quickPlay"),Boolean)
+            End Get
+            Set
+                Me("quickPlay") = value
+            End Set
+        End Property
     End Class
 End Namespace
 
