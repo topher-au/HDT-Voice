@@ -1,6 +1,19 @@
 <h2>What is HDT-Voice?</h2>
 HDT-Voice is a plugin for Hearthstone Deck Tracker that allows you to play the game and navigate the menus using simple voice commands.
 
+<h2>What's new in this version</h2>
+<b>Features</b>
+- Added a status indicator. Red means the plugin is busy, green means you can speak. (Disable in settings)
+- Added "quick play" setting (see below), which shortens the grammar used for playing cards (Disable in settings)
+- Added option to hide or change the location of the text indicator
+
+<b>Bug fixes and miscellaneous</b>
+- When multiple of one card are in a zone, not specifying a number defaults to the leftmost
+- Minor grammar changes and updates
+- The plugin should now pick up the correct card when playing a card
+- Playing a spell to a friendly minion now no longer targets the wrong minion
+- The plugin should now more frequently update the data it uses for getting target positions
+
 <h2>Sounds good, how do I get it?</h2>
 The latest version of HDT-Voice will always be available here:
 https://github.com/topher-au/HDT-Voice/releases
@@ -45,7 +58,7 @@ Or maybe the plugin thought you said "brawl", in which case say...
 
 <h3>Game Mode</h3>
 When referring to a card or minion, you may refer to it by it's name or by it's number.
-- <i>&lt;card&gt;</i> - a card name or number ("1", "2", "Sludge Belcher", "Armorsmith 2")
+- <i>&lt;card&gt;</i> - a card name or number ("card 1", "card 2", "Sludge Belcher", "Armorsmith 2")
 - <i>&lt;friendly&gt;</i> - a friendly minion ("minion 3", "Sludge Belcher 2")
 - <i>&lt;enemy&gt;</i> - an enemy minion
 - <i>&lt;target&gt;</i> - a target, specify which side ("friendly minion 4", "enemy hero")
@@ -57,13 +70,17 @@ The first thing you do when you start a game of Hearthstone is mulligan a card (
 Once the game has started, you can perform a variety of commands as listed below.
 
 - <b>"target &lt;target&gt;"</b> ("target friendly face", "target my minion 1", "target enemy hero")
+- <b>"click &lt;target&gt;"</b> ("click my hero", "click enemy face", "target enemy hero")
+- "click" - send a click to the current cursor position
 
-- <b>"play &lt;card&gt;"</b> - play a card to the right of the board
-- <b>"play &lt;card&gt; to &lt;friendly&gt;"</b> - play a minion to the left of the friendly minion specified
-- <b>"cast &lt;card&gt; on &lt;target&gt;"</b> - play a card onto the minion specified
+- <b>"play &lt;card&gt;"</b> - play a card to the board
+- <b>"play &lt;card&gt; on &lt;friendly&gt;"</b> - play a minion to the left of the friendly minion specified
+- <b>"play &lt;card&gt; to &lt;target&gt;"</b> - play a card onto the specified target
+- <b>Quick Play:</b> You don't need to say "play card to target", just "card to target"
 
 - <b>"use hero power"</b> - use hero power
 - <b>"use hero power on &lt;target&gt;"</b> - use hero power on specified minion
+- <b>Quick Play:</b> Just say "hero power" or "hero power on target"
 
 - <b>"attack &lt;enemy&gt; with &lt;friendly&gt;"</b> ("Attack Sylvanas Windrunner with Dr. Boom")
 - <b>"&lt;friendly&gt; go &lt;enemy&gt;"</b> ("Huffer go face")
