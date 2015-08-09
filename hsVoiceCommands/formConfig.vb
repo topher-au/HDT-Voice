@@ -33,6 +33,8 @@
         checkQuick.Checked = My.Settings.quickPlay
 
         numThreshold.Value = My.Settings.Threshold
+
+
     End Sub
 
     Private Sub checkShowStatus_CheckedChanged(sender As Object, e As EventArgs) Handles checkShowStatus.CheckedChanged
