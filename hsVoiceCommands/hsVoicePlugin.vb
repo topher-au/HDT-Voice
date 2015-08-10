@@ -119,18 +119,23 @@ Public Class hsVoicePlugin
 
         'Add handlers to reload grammar when needed
         GameEvents.OnGameStart.Add(New Action(AddressOf requestRecogUpdate))
-        GameEvents.OnInMenu.Add(New Action(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerDraw.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerPlay.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerGet.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
         GameEvents.OnTurnStart.Add(New Action(Of ActivePlayer)(AddressOf requestRecogUpdate))
+
+        GameEvents.OnInMenu.Add(New Action(AddressOf requestRecogUpdate))
+
         GameEvents.OnPlayerDeckDiscard.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerDraw.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerFatigue.Add(New Action(Of Integer)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerGet.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerHandDiscard.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerHeroPower.Add(New Action(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerPlay.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
         GameEvents.OnPlayerPlayToDeck.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
         GameEvents.OnPlayerPlayToHand.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+
         GameEvents.OnOpponentPlay.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnOpponentDraw.Add(New Action(AddressOf requestRecogUpdate))
         GameEvents.OnOpponentHeroPower.Add(New Action(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerDraw.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerHandDiscard.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
 
         'Handlers for plugin settings and overlay size
         AddHandler My.Settings.PropertyChanged, AddressOf doOverlayLayout
@@ -164,17 +169,20 @@ Public Class hsVoicePlugin
             actionInProgress = False
             Return
         End If
-
+        updateStatusText("Executing """ & e.Result.Text & """...")
+        writeLog("Command recognized """ & e.Result.Text & """ - executing action")
         Do While actionInProgress
             'Loop if another command is executing or we get BUGS
         Loop
 
-        actionInProgress = True 'start command processing
-        setIndicatorColor(redBrush)
+
+        hsRecog.RecognizeAsyncCancel()
         rebuildCardData()
 
-        updateStatusText("Executing """ & e.Result.Text & """...")
-        writeLog("Command recognized """ & e.Result.Text & """ - executing action")
+        actionInProgress = True 'start command processing
+        setIndicatorColor(redBrush)
+
+
 
         If Debugger.IsAttached Then 'debug only commands
             If e.Result.Text = "debug show cards" Then
@@ -246,6 +254,7 @@ Public Class hsVoicePlugin
         hsRecog.RequestRecognizerUpdate() 'request grammar update
         actionInProgress = False 'end command processing
         setIndicatorColor(greenBrush)
+        hsRecog.RecognizeAsync(RecognizeMode.Multiple)
 
         timerReset.Enabled = False 'reset timer to reset status text
         timerReset.Enabled = True
@@ -455,9 +464,6 @@ Public Class hsVoicePlugin
     Private Sub doPlay(e As SpeechRecognizedEventArgs)
         Dim myTarget = e.Result.Semantics("card").Value
         Dim cardNum = e.Result.Semantics("card").Value.ToString.Substring(1)
-        Do While cardNum > handCards.Count
-            cardNum -= 1
-        Loop
         Dim cardType = handCards.Item(cardNum - 1).Card.Type
 
         If e.Result.Semantics.ContainsKey("friendly") Then 'Play card to friendly target
