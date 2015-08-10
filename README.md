@@ -79,6 +79,7 @@ Once the game has started, you can perform a variety of commands as listed below
 <i>Quick Play:</i> Just say "hero power" or "hero power on target"
 
 <b>Attacking with Minions</b>
+- <b><i>(Since you can't attack a friendly minion with an enemy minion, you don't need to specify "friendly" or "enemy" for these commands)</i></b>
 - <b>"attack &lt;enemy&gt; with &lt;friendly&gt;"</b> ("Attack Sylvanas Windrunner with Dr. Boom")
 - <b>"&lt;friendly&gt; go &lt;enemy&gt;"</b> ("Huffer go face")
 
