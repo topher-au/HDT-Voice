@@ -36,6 +36,8 @@ Public Class hsVoicePlugin
     Public voiceLog As IO.StreamWriter
     Public lastCommand As New String("none")
 
+    Public WithEvents timerReset As New Timer
+
     'Overlay elements
     Public overlayCanvas As Canvas = Overlay.OverlayCanvas 'the main overlay object
     Public hdtStatus As HearthstoneTextBlock 'status text
@@ -88,6 +90,8 @@ Public Class hsVoicePlugin
         Try
             hsRecog = New SpeechRecognitionEngine
             hsRecog.SetInputToDefaultAudioDevice()
+            hsRecog.BabbleTimeout = New TimeSpan(0, 0, 3)
+            hsRecog.InitialSilenceTimeout = New TimeSpan(0, 0, 3)
         Catch ex As Exception
             writeLog("Error initializing speech recognition: " & ex.Message)
             MsgBox("An error occurred initializing speech recognition: " & vbNewLine & ex.Message, vbOK, "HDT-Voice")
@@ -113,51 +117,40 @@ Public Class hsVoicePlugin
         GameEvents.OnGameStart.Add(New Action(AddressOf onNewGame))
         GameEvents.OnPlayerMulligan.Add(New Action(Of Card)(AddressOf onMulligan))
 
+        'Add handlers to reload grammar when needed
+        GameEvents.OnGameStart.Add(New Action(AddressOf requestRecogUpdate))
+        GameEvents.OnInMenu.Add(New Action(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerDraw.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerPlay.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerGet.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnTurnStart.Add(New Action(Of ActivePlayer)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerDeckDiscard.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerPlayToDeck.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerPlayToHand.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnOpponentPlay.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnOpponentHeroPower.Add(New Action(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerDraw.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerHandDiscard.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+
+        'Handlers for plugin settings and overlay size
         AddHandler My.Settings.PropertyChanged, AddressOf doOverlayLayout
         AddHandler Overlay.OverlayCanvas.SizeChanged, AddressOf doOverlayLayout
 
-        actionInProgress = False
-
-        If My.Settings.outputDebug Then
+        If My.Settings.outputDebug Then 'initialize logfile
             voiceLog = New IO.StreamWriter("hdtvoicelog.txt")
         End If
 
-        rebuildCardData()
-        recogWorker.RunWorkerAsync()
+        actionInProgress = False
 
-    End Sub
-    Public Sub bwRecog_DoWork() Handles recogWorker.DoWork
-        Do
-            setIndicatorColor(greenBrush)
-            hsRecog.UnloadAllGrammars()
-            rebuildCardData()
-            hsRecog.LoadGrammar(buildGrammar)
-            updateStatusText("Listening...")
-            hsRecog.Recognize()
-        Loop
+        timerReset.Interval = 2000
+        timerReset.Enabled = True
+
+        hsRecog.LoadGrammar(buildGrammar) 'Load initial grammar
+        hsRecog.RecognizeAsync(RecognizeMode.Multiple) 'Start recognition
     End Sub
 
-    'Event handlers
-    Public Sub onNewGame()
-        writeLog("New Game detected")
-        ' Initialize controller IDs
-        playerID = Nothing
-        opponentID = Nothing
-        mulliganDone = False
-
-        If Not IsNothing(PlayerEntity) Then _
-                playerID = PlayerEntity.GetTag(GAME_TAG.CONTROLLER)
-        If Not IsNothing(OpponentEntity) Then _
-                opponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
-    End Sub
-    Public Sub onMulligan(Optional c As Card = Nothing)
-        mulliganDone = True
-    End Sub
+    'Speech recognition events
     Public Sub onSpeechRecognized(sender As Object, e As SpeechRecognizedEventArgs) Handles hsRecog.SpeechRecognized
-        actionInProgress = True
-        setIndicatorColor(redBrush)
-        rebuildCardData()
-
         'If hearthstone is inactive, exit
         If Not checkActiveWindow() Then
             writeLog("Heard command """ & e.Result.Text & """ but Hearthstone was inactive")
@@ -172,9 +165,16 @@ Public Class hsVoicePlugin
             Return
         End If
 
-        'Begin processing
+        Do While actionInProgress
+            'Loop if another command is executing or we get BUGS
+        Loop
 
+        actionInProgress = True 'start command processing
+        setIndicatorColor(redBrush)
+        rebuildCardData()
 
+        updateStatusText("Executing """ & e.Result.Text & """...")
+        writeLog("Command recognized """ & e.Result.Text & """ - executing action")
 
         If Debugger.IsAttached Then 'debug only commands
             If e.Result.Text = "debug show cards" Then
@@ -199,24 +199,24 @@ Public Class hsVoicePlugin
             End If
         End If
 
-        updateStatusText("Executing """ & e.Result.Text & """...")
-        writeLog("Command recognized """ & e.Result.Text & """ - executing action")
+        'do menu processing
+        If e.Result.Semantics.ContainsKey("menu") And Game.IsInMenu Then
+            doMenu(e)
+        End If
 
+        'do game processing
         If e.Result.Semantics.ContainsKey("action") Then
             Select Case e.Result.Semantics("action").Value
-                Case "target"
+                Case "target" 'move cursor to target
                     doTarget(e)
 
-                Case "click"
+                Case "click" 'send a click
                     doClick(e)
 
                 Case "mulligan" 'mulligan a card or confirm
                     doMulligan(e)
 
                 Case "play" 'play a card
-                    doPlay(e)
-
-                Case "cast" 'play a card
                     doPlay(e)
 
                 Case "attack" 'Attack with minion
@@ -228,10 +228,10 @@ Public Class hsVoicePlugin
                 Case "say" ' Do an emote
                     doSay(e)
 
-                Case "choose"
+                Case "choose" 'Choose an option of x
                     doChoose(e)
 
-                Case "cancel"
+                Case "cancel" 'simply right click
                     sendRightClick()
 
                 Case "end"
@@ -242,11 +242,51 @@ Public Class hsVoicePlugin
 
         End If
 
-        If e.Result.Semantics.ContainsKey("menu") And Game.IsInMenu Then
-            doMenu(e)
-        End If
-        lastCommand = e.Result.Text
-        actionInProgress = False
+        lastCommand = e.Result.Text 'set last command executed
+        hsRecog.RequestRecognizerUpdate() 'request grammar update
+        actionInProgress = False 'end command processing
+        setIndicatorColor(greenBrush)
+
+        timerReset.Enabled = False 'reset timer to reset status text
+        timerReset.Enabled = True
+    End Sub
+    Public Sub onUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles hsRecog.RecognizerUpdateReached
+        Do While actionInProgress
+
+        Loop
+
+        rebuildCardData()
+        hsRecog.UnloadAllGrammars()
+        hsRecog.LoadGrammar(buildGrammar)
+    End Sub
+    Public Sub requestRecogUpdate(Optional e = Nothing)
+        setIndicatorColor(redBrush)
+        Do While actionInProgress
+
+        Loop
+        hsRecog.RequestRecognizerUpdate()
+        setIndicatorColor(greenBrush)
+    End Sub
+
+    'Event handlers
+    Public Sub onNewGame()
+        writeLog("New Game detected")
+        ' Initialize controller IDs
+        playerID = Nothing
+        opponentID = Nothing
+        mulliganDone = False
+
+        If Not IsNothing(PlayerEntity) Then _
+                playerID = PlayerEntity.GetTag(GAME_TAG.CONTROLLER)
+        If Not IsNothing(OpponentEntity) Then _
+                opponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
+    End Sub
+    Public Sub onMulligan(Optional c As Card = Nothing)
+        mulliganDone = True
+    End Sub
+    Public Sub onResetTimer() Handles timerReset.Tick
+        updateStatusText("Listening...")
+        timerReset.Enabled = False
     End Sub
 
     'Voice command handlers
@@ -316,7 +356,7 @@ Public Class hsVoicePlugin
             moveCursorToTarget(targetName)
         End If
         sendLeftClick()
-        Sleep(500)
+        Sleep(100)
     End Sub 'handle clicking mouse
     Private Sub doMenu(e As SpeechRecognizedEventArgs)
         Select Case e.Result.Semantics("menu").Value
@@ -391,7 +431,7 @@ Public Class hsVoicePlugin
             moveCursor(62, 76)
             sendLeftClick()
         End If
-        Sleep(500)
+        Sleep(100)
     End Sub 'handle hero powers
     Private Sub doAttack(e As SpeechRecognizedEventArgs)
         If e.Result.Semantics.ContainsKey("opposing") Then
@@ -410,7 +450,7 @@ Public Class hsVoicePlugin
             moveCursor(50, 20)
             endDrag()
         End If
-        Sleep(500)
+        Sleep(100)
     End Sub 'handle attacking
     Private Sub doPlay(e As SpeechRecognizedEventArgs)
         Dim myTarget = e.Result.Semantics("card").Value
@@ -447,7 +487,7 @@ Public Class hsVoicePlugin
             End If
 
         End If
-        Sleep(500)
+        Sleep(100)
     End Sub
     Private Sub doMulligan(e As SpeechRecognizedEventArgs)
         If e.Result.Semantics.ContainsKey("card") Then
@@ -535,7 +575,7 @@ Public Class hsVoicePlugin
                 Dim allMinions = boardFriendly.Count
 
                 Dim allWidth = allMinions * 9.5
-                Dim myMinion = tarMinion * 9.5 - 4.5
+                Dim myMinion = tarMinion * 9.5 - 6
 
                 Dim minX = 49 - (allWidth / 2) + myMinion
                 moveCursor(minX, 55)
@@ -808,6 +848,19 @@ Public Class hsVoicePlugin
 
         writeLog("Started building game grammar")
 
+        Dim heroPowerEntity As Entity = Entities.First(Function(x)
+                                                           Dim cardType = x.GetTag(GAME_TAG.CARDTYPE)
+                                                           Dim cardTroller = x.GetTag(GAME_TAG.CONTROLLER)
+
+                                                           If cardType = Hearthstone.TAG_CARDTYPE.HERO_POWER And cardTroller = playerID Then
+                                                               Return True
+                                                           End If
+
+                                                           Return False
+                                                       End Function)
+        Dim heroPowerName As String = heroPowerEntity.Card.Name
+        Dim heroChoice = New Choices(New SemanticResultValue("hero power", "hero"), New SemanticResultValue(heroPowerName, "hero"))
+
         'build grammar for card actions
         If cardGrammar.DebugShowPhrases.Count Then
             'target card
@@ -853,6 +906,8 @@ Public Class hsVoicePlugin
 
         End If
 
+
+
         'build grammar friendly minion actions
         If friendlyGrammar.DebugShowPhrases.Count Then
             'target friendly minion
@@ -881,8 +936,8 @@ Public Class hsVoicePlugin
             Dim heroFriendly As New GrammarBuilder
             If Not My.Settings.quickPlay Then _
                 heroFriendly.Append("use")
-            heroFriendly.Append(New SemanticResultKey("action", "hero"))
-            heroFriendly.Append("power on")
+            heroFriendly.Append(New SemanticResultkey("action", heroChoice))
+            heroFriendly.Append(New Choices("on", "to"))
             heroFriendly.Append(friendlyNames)
             heroFriendly.Append(friendlyGrammar)
             finalChoices.Add(heroFriendly)
@@ -907,8 +962,8 @@ Public Class hsVoicePlugin
             Dim heroOpposing As New GrammarBuilder
             If Not My.Settings.quickPlay Then _
                 heroOpposing.Append("use")
-            heroOpposing.Append(New SemanticResultKey("action", "hero"))
-            heroOpposing.Append("power on")
+            heroOpposing.Append(New SemanticResultKey("action", heroChoice))
+            heroOpposing.Append(New Choices("on", "to"))
             heroOpposing.Append(opposingNames)
             heroOpposing.Append(opposingGrammar)
             finalChoices.Add(heroOpposing)
@@ -924,8 +979,7 @@ Public Class hsVoicePlugin
         Dim heroPower As New GrammarBuilder
         If Not My.Settings.quickPlay Then _
             heroPower.Append("use") ' if quickplay is enabled, just say "hero power"
-        heroPower.Append(New SemanticResultKey("action", "hero"))
-        heroPower.Append("power")
+        heroPower.Append(New SemanticResultKey("action", heroChoice))
         finalChoices.Add(heroPower)
 
         Dim endTurn As New GrammarBuilder
@@ -1025,6 +1079,7 @@ Public Class hsVoicePlugin
         writeLog("Complete")
     End Sub 'Rebuilds data for cards in hand and on board
     Public Sub writeLog(Line As String)
+        Line = "HDT-Voice: " & Line
         Debug.WriteLine(Line)
         If My.Settings.outputDebug Then
             If IsNothing(voiceLog) Then
