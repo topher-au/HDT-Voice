@@ -3,16 +3,8 @@ HDT-Voice is a plugin for Hearthstone Deck Tracker that allows you to play the g
 
 <h2>What's new in this version</h2>
 <b>Features</b>
-- Added a status indicator. Red means the plugin is busy, green means you can speak. (Disable in settings)
-- Added "quick play" setting (see below), which shortens the grammar used for playing cards (Disable in settings)
-- Added option to hide or change the location of the text indicator
-
-<b>Bug fixes and miscellaneous</b>
-- When multiple of one card are in a zone, not specifying a number defaults to the leftmost
-- Minor grammar changes and updates
-- The plugin should now pick up the correct card when playing a card
-- Playing a spell to a friendly minion now no longer targets the wrong minion
-- The plugin should now more frequently update the data it uses for getting target positions
+- Hero power may now also be called by it's name, i.e. "Armor Up" or "Lesser Heal"
+- Plugin will (hopefully) be better at keeping track of which card and minion is where
 
 <h2>Sounds good, how do I get it?</h2>
 The latest version of HDT-Voice will always be available here:
@@ -69,30 +61,38 @@ The first thing you do when you start a game of Hearthstone is mulligan a card (
 
 Once the game has started, you can perform a variety of commands as listed below.
 
+<b>Cursor and Targeting</b>
 - <b>"target &lt;target&gt;"</b> ("target friendly face", "target my minion 1", "target enemy hero")
 - <b>"click &lt;target&gt;"</b> ("click my hero", "click enemy face", "target enemy hero")
-- "click" - send a click to the current cursor position
+- <b>"click"</b> - send a click to the current cursor position
+- <b>"cancel"</b> - send a right click to the current cursor position
 
+<b>Playing Cards</b>
 - <b>"play &lt;card&gt;"</b> - play a card to the board
 - <b>"play &lt;card&gt; on &lt;friendly&gt;"</b> - play a minion to the left of the friendly minion specified
 - <b>"play &lt;card&gt; to &lt;target&gt;"</b> - play a card onto the specified target
-- <b>Quick Play:</b> You don't need to say "play card to target", just "card to target"
+- <i>Quick Play:</i> You don't need to say "play card to target", just "card to target"
 
+<b>Using Hero Power</b> <i>(you can say the hero power's name instead of "hero power")</i>
 - <b>"use hero power"</b> - use hero power
-- <b>"use hero power on &lt;target&gt;"</b> - use hero power on specified minion
-- <b>Quick Play:</b> Just say "hero power" or "hero power on target"
+- <b>"use hero power on &lt;target&gt;"</b> - use hero power on specified minion<br>
+<i>Quick Play:</i> Just say "hero power" or "hero power on target"
 
+<b>Attacking with Minions</b>
 - <b>"attack &lt;enemy&gt; with &lt;friendly&gt;"</b> ("Attack Sylvanas Windrunner with Dr. Boom")
 - <b>"&lt;friendly&gt; go &lt;enemy&gt;"</b> ("Huffer go face")
 
+<b>Emotes</b>
 - <b>"say &lt;emote&gt;"</b>
 thanks/thank you, well played, greetings/hello, sorry, oops, threaten
 
+<b>Choices and Options</b>
 - <b>"choose option &lt;x&gt; of &lt;y&gt;"</b>
 when presented with options (such as certain Druid cards), x is the option you
 want to select and y is the number of total options, up to 4.
 Say "click" afterwards to confirm your selection.
 
+<b>End Turn</b>
 - <b>"end turn"</b> - ends your turn
 
 <h3>Synonyms!</h3>
