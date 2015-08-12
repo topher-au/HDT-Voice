@@ -93,12 +93,18 @@ Public Class hsVoicePlugin
         Try
 
             Dim rec As IReadOnlyCollection(Of RecognizerInfo) = SpeechRecognitionEngine.InstalledRecognizers
-            writeLog("Installed recognizers: " & rec.Count)
-            For Each e In rec
-                writeLog(e.Culture.Name)
-            Next
-            writeLog("Initializing recognizer for: " & rec.First.Culture.Name)
-            hsRecog = New SpeechRecognitionEngine(New Globalization.CultureInfo(rec.First.Culture.Name))
+            If rec.Count > 0 Then
+                writeLog("Installed recognizers: " & rec.Count)
+                For Each e In rec
+                    writeLog(e.Culture.Name)
+                Next
+                writeLog("Initializing recognizer for: " & rec.First.Culture.Name)
+                hsRecog = New SpeechRecognitionEngine(New Globalization.CultureInfo(rec.First.Culture.Name))
+            Else
+                writeLog("No speech recognizer found. Attempting to start engine anyway.")
+                hsRecog = New SpeechRecognitionEngine()
+            End If
+
             hsRecog.SetInputToDefaultAudioDevice()
             hsRecog.BabbleTimeout = New TimeSpan(0, 0, 3)
             hsRecog.InitialSilenceTimeout = New TimeSpan(0, 0, 3)
@@ -145,10 +151,6 @@ Public Class hsVoicePlugin
         'Handlers for plugin settings and overlay size
         AddHandler My.Settings.PropertyChanged, AddressOf doOverlayLayout
         AddHandler Overlay.OverlayCanvas.SizeChanged, AddressOf doOverlayLayout
-
-        If My.Settings.outputDebug Then 'initialize logfile
-            voiceLog = New IO.StreamWriter("hdtvoicelog.txt")
-        End If
 
         actionInProgress = False
 
