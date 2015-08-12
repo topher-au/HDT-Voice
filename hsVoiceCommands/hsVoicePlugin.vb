@@ -378,15 +378,6 @@ Public Class hsVoicePlugin
             Case "play"
                 moveCursor(50, 31)
                 sendLeftClick()
-            Case "solo"
-                moveCursor(50, 38)
-                sendLeftClick()
-            Case "arena"
-                moveCursor(50, 45)
-                sendLeftClick()
-            Case "brawl"
-                moveCursor(50, 52)
-                sendLeftClick()
             Case "casual"
                 moveCursor(75, 20)
                 sendLeftClick()
@@ -402,15 +393,93 @@ Public Class hsVoicePlugin
             Case "start game"
                 moveCursor(80, 85)
                 sendLeftClick()
+
+            Case "solo"
+                moveCursor(50, 38)
+                sendLeftClick()
+
+            'arena commands
+            Case "arena"
+                moveCursor(50, 45)
+                sendLeftClick()
+            Case "buy arena with gold"
+                moveCursor(60, 62)
+                sendLeftClick()
+            Case "cancel arena"
+                moveCursor(50, 75)
+                sendLeftClick()
+            Case "start arena"
+                moveCursor(60, 75)
+                sendLeftClick()
+            Case "hero 1"
+                moveCursor(20, 40)
+                sendLeftClick()
+            Case "hero 2"
+                moveCursor(40, 40)
+                sendLeftClick()
+            Case "hero 3"
+                moveCursor(55, 40)
+                sendLeftClick()
+            Case "card 1"
+                moveCursor(20, 40)
+                sendLeftClick()
+            Case "card 2"
+                moveCursor(40, 40)
+                sendLeftClick()
+            Case "card 3"
+                moveCursor(55, 40)
+                sendLeftClick()
+            Case "confirm"
+                moveCursor(50, 45)
+                sendLeftClick()
+
+            Case "brawl"
+                moveCursor(50, 52)
+                sendLeftClick()
             Case "start brawl"
                 moveCursor(65, 85)
                 sendLeftClick()
+
+
+            Case "open packs"
+                moveCursor(40, 85)
+                sendLeftClick()
+            Case "open top pack"
+                moveCursor(12, 20)
+                startDrag()
+                moveCursor(59, 49)
+                endDrag()
+            Case "open bottom pack"
+                moveCursor(12, 50)
+                startDrag()
+                moveCursor(59, 49)
+                endDrag()
+            Case "open card 1"
+                moveCursor(60, 35)
+                sendLeftClick()
+            Case "open card 2"
+                moveCursor(80, 35)
+                sendLeftClick()
+            Case "open card 3"
+                moveCursor(70, 70)
+                sendLeftClick()
+            Case "open card 4"
+                moveCursor(50, 70)
+                sendLeftClick()
+            Case "open card 5"
+                moveCursor(40, 35)
+                sendLeftClick()
+            Case "done"
+                moveCursor(60, 50)
+                sendLeftClick()
+
             Case "cancel"
                 moveCursor(52, 85)
                 sendLeftClick()
             Case "back"
-                moveCursor(92, 92)
+                moveCursor(92, 91)
                 sendLeftClick()
+
             Case "deck"
                 Dim deckNum = e.Result.Semantics("deck").Value
                 Dim deckRow = 1
@@ -718,15 +787,39 @@ Public Class hsVoicePlugin
 
 
             menuChoices.Add(New SemanticResultKey("menu", "play"))
-            menuChoices.Add(New SemanticResultKey("menu", "solo"))
-            menuChoices.Add(New SemanticResultKey("menu", "arena"))
-            menuChoices.Add(New SemanticResultKey("menu", "brawl"))
             menuChoices.Add(New SemanticResultKey("menu", "casual"))
             menuChoices.Add(New SemanticResultKey("menu", "ranked"))
             menuChoices.Add(New SemanticResultKey("menu", "basic"))
             menuChoices.Add(New SemanticResultKey("menu", "custom"))
             menuChoices.Add(New SemanticResultKey("menu", "start game"))
+
+            menuChoices.Add(New SemanticResultKey("menu", "solo"))
+
+            menuChoices.Add(New SemanticResultKey("menu", "arena"))
+            menuChoices.Add(New SemanticResultKey("menu", "start arena"))
+            menuChoices.Add(New SemanticResultKey("menu", "buy arena with gold"))
+            menuChoices.Add(New Choices(New SemanticResultKey("menu", "cancel arena"), New SemanticResultKey("menu", New SemanticResultValue("OK", "cancel arena")), New SemanticResultKey("menu", New SemanticResultValue("choose", "cancel arena"))))
+            menuChoices.Add(New SemanticResultKey("menu", "hero 1"))
+            menuChoices.Add(New SemanticResultKey("menu", "hero 2"))
+            menuChoices.Add(New SemanticResultKey("menu", "hero 3"))
+            menuChoices.Add(New SemanticResultKey("menu", "card 1"))
+            menuChoices.Add(New SemanticResultKey("menu", "card 2"))
+            menuChoices.Add(New SemanticResultKey("menu", "card 3"))
+            menuChoices.Add(New SemanticResultKey("menu", "confirm"))
+
+            menuChoices.Add(New Choices(New SemanticResultKey("menu", "brawl"), New SemanticResultKey("menu", New SemanticResultValue("tavern brawl", "brawl"))))
             menuChoices.Add(New SemanticResultKey("menu", "start brawl"))
+
+            menuChoices.Add(New SemanticResultKey("menu", "open packs"))
+            menuChoices.Add(New SemanticResultKey("menu", "open top pack"))
+            menuChoices.Add(New SemanticResultKey("menu", "open bottom pack"))
+            menuChoices.Add(New SemanticResultKey("menu", "open card 1"))
+            menuChoices.Add(New SemanticResultKey("menu", "open card 2"))
+            menuChoices.Add(New SemanticResultKey("menu", "open card 3"))
+            menuChoices.Add(New SemanticResultKey("menu", "open card 4"))
+            menuChoices.Add(New SemanticResultKey("menu", "open card 5"))
+            menuChoices.Add(New SemanticResultKey("menu", "done"))
+
             menuChoices.Add(New SemanticResultKey("menu", "cancel"))
             menuChoices.Add(New SemanticResultKey("menu", "back"))
 
