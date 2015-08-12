@@ -19,6 +19,8 @@ Public Class hsVoicePlugin
     Public Declare Function GetForegroundWindow Lib "user32" () As System.IntPtr
     Public Declare Auto Function GetWindowText Lib "user32" (ByVal hWnd As System.IntPtr, ByVal lpString As System.Text.StringBuilder, ByVal cch As Integer) As Integer
     Public Declare Sub mouse_event Lib "user32" (ByVal dwFlags As Integer, ByVal dx As Integer, ByVal dy As Integer, ByVal cButtons As Integer, ByVal dwExtraInfo As IntPtr)
+    Declare Function GetAsyncKeyState Lib "user32" (ByVal vkey As Integer) As Short
+
     Const MOUSE_LEFTDOWN As UInteger = &H2
     Const MOUSE_LEFTUP As UInteger = &H4
     Const MOUSE_RIGHTDOWN As UInteger = &H8
@@ -31,19 +33,20 @@ Public Class hsVoicePlugin
     End Structure
     ' Speech recognition objects
     Public WithEvents hsRecog As SpeechRecognitionEngine
-    Public WithEvents recogWorker As New BackgroundWorker
+    Public WithEvents hotkeyWorker As New BackgroundWorker
 
     Public voiceLog As IO.StreamWriter
     Public lastCommand As New String("none")
 
     Public WithEvents timerReset As New Timer
 
+    Public WithEvents grammarReloader As New BackgroundWorker
+
     'Overlay elements
     Public overlayCanvas As Canvas = Overlay.OverlayCanvas 'the main overlay object
     Public hdtStatus As HearthstoneTextBlock 'status text
-    Dim redBrush As New SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 00, 00))
-    Dim greenBrush As New SolidColorBrush(System.Windows.Media.Color.FromRgb(00, 255, 00))
-    Public ellStatus As Ellipse 'status indicator
+
+    Public sreListen As Boolean ' Should we be listening?
 
     Public handCards, boardOpposing, boardFriendly As New List(Of Entity)
     Public playerID As Integer = 0
@@ -106,12 +109,6 @@ Public Class hsVoicePlugin
         Canvas.SetLeft(hdtStatus, 4)
         overlayCanvas.Children.Add(hdtStatus)
 
-        ellStatus = New Ellipse
-        ellStatus.Height = 16
-        ellStatus.Width = 16
-        ellStatus.StrokeThickness = 0
-        overlayCanvas.Children.Add(ellStatus)
-
         writeLog("Attaching event handlers...")
         'Add event handlers
         GameEvents.OnGameStart.Add(New Action(AddressOf onNewGame))
@@ -150,8 +147,10 @@ Public Class hsVoicePlugin
         timerReset.Interval = 2000
         timerReset.Enabled = True
 
-        hsRecog.LoadGrammar(buildGrammar) 'Load initial grammar
-        hsRecog.RecognizeAsync(RecognizeMode.Multiple) 'Start recognition
+        hotkeyWorker.RunWorkerAsync() 'Start listening for hotkey
+        grammarReloader.RunWorkerAsync()
+
+        ToggleSpeech()
     End Sub
 
     'Speech recognition events
@@ -175,14 +174,11 @@ Public Class hsVoicePlugin
             'Loop if another command is executing or we get BUGS
         Loop
 
+        actionInProgress = True
+        Dim sreReset = sreListen
+        If sreReset Then ToggleSpeech()
 
-        hsRecog.RecognizeAsyncCancel()
-        rebuildCardData()
-
-        actionInProgress = True 'start command processing
-        setIndicatorColor(redBrush)
-
-
+        'start command processing
 
         If Debugger.IsAttached Then 'debug only commands
             If e.Result.Text = "debug show cards" Then
@@ -253,11 +249,7 @@ Public Class hsVoicePlugin
         lastCommand = e.Result.Text 'set last command executed
         hsRecog.RequestRecognizerUpdate() 'request grammar update
         actionInProgress = False 'end command processing
-        setIndicatorColor(greenBrush)
-        hsRecog.RecognizeAsync(RecognizeMode.Multiple)
-
-        timerReset.Enabled = False 'reset timer to reset status text
-        timerReset.Enabled = True
+        If sreReset Then ToggleSpeech()
     End Sub
     Public Sub onUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles hsRecog.RecognizerUpdateReached
         Do While actionInProgress
@@ -269,12 +261,10 @@ Public Class hsVoicePlugin
         hsRecog.LoadGrammar(buildGrammar)
     End Sub
     Public Sub requestRecogUpdate(Optional e = Nothing)
-        setIndicatorColor(redBrush)
         Do While actionInProgress
 
         Loop
         hsRecog.RequestRecognizerUpdate()
-        setIndicatorColor(greenBrush)
     End Sub
 
     'Event handlers
@@ -289,12 +279,18 @@ Public Class hsVoicePlugin
                 playerID = PlayerEntity.GetTag(GAME_TAG.CONTROLLER)
         If Not IsNothing(OpponentEntity) Then _
                 opponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
+
     End Sub
     Public Sub onMulligan(Optional c As Card = Nothing)
         mulliganDone = True
     End Sub
     Public Sub onResetTimer() Handles timerReset.Tick
-        updateStatusText("Listening...")
+        If sreListen = True Then
+            updateStatusText("Listening... (F12 to stop)")
+        Else
+            updateStatusText("Stopped (Press F12)")
+        End If
+
         timerReset.Enabled = False
     End Sub
 
@@ -537,21 +533,21 @@ Public Class hsVoicePlugin
         mouse_event(MOUSE_LEFTDOWN, Cursor.Position.X, Cursor.Position.Y, 0, 0)
         Sleep(50)
         mouse_event(MOUSE_LEFTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0)
-        Sleep(50)
+        Sleep(100)
     End Sub
     Public Sub sendRightClick()
         mouse_event(MOUSE_RIGHTDOWN, Cursor.Position.X, Cursor.Position.Y, 0, 0)
         Sleep(50)
         mouse_event(MOUSE_RIGHTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0)
-        Sleep(50)
+        Sleep(100)
     End Sub
     Public Sub startDrag()
         mouse_event(MOUSE_LEFTDOWN, Cursor.Position.X, Cursor.Position.Y, 0, 0)
-        Sleep(50)
+        Sleep(100)
     End Sub
     Public Sub endDrag()
         mouse_event(MOUSE_LEFTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0)
-        Sleep(50)
+        Sleep(100)
     End Sub
     Public Sub dragTargetToTarget(startTarget As String, endTarget As String)
         moveCursorToTarget(startTarget)
@@ -664,23 +660,13 @@ Public Class hsVoicePlugin
                 hdtStatus.TextAlignment = System.Windows.TextAlignment.Right
         End Select
 
-        'Update visiblity of status indicator light
-        If My.Settings.showStatusLight = False Then
-            ellStatus.Visibility = System.Windows.Visibility.Hidden
-        Else
-            ellStatus.Visibility = System.Windows.Visibility.Visible
-        End If
-        If Game.IsInMenu Then
-            Canvas.SetTop(ellStatus, (overlayCanvas.Height * 0.95) - ellStatus.ActualHeight / 2)
-            Canvas.SetLeft(ellStatus, (overlayCanvas.Width / 2 + 3) - ellStatus.ActualWidth / 2)
-        Else
-            Canvas.SetTop(ellStatus, (overlayCanvas.Height * 0.68) - ellStatus.ActualHeight / 2)
-            Canvas.SetLeft(ellStatus, (overlayCanvas.Width / 2 + 3) - ellStatus.ActualWidth / 2)
-        End If
-
         Return Nothing
     End Function 'Handles changing the overlay layout when it is resized
     Public Sub updateStatusText(Status As String)
+        If Status = Nothing Then
+            onResetTimer()
+            return
+        End If
         Try
             hdtStatus.Dispatcher.Invoke(Sub()
                                             Dim newStatus = "HDT-Voice: "
@@ -689,20 +675,13 @@ Public Class hsVoicePlugin
                                                 newStatus &= vbNewLine & "Last executed: " & lastCommand
                                             End If
                                             hdtStatus.Text = newStatus
-                                            hdtStatus.UpdateLayout()
-                                            doOverlayLayout()
+                                            timerReset.Enabled = True
                                         End Sub)
         Catch ex As Exception
             Return
         End Try
 
     End Sub 'Updates the text on the status text block
-    Public Sub setIndicatorColor(brush As SolidColorBrush)
-        ellStatus.Dispatcher.Invoke(Sub()
-                                        ellStatus.Fill = brush
-                                        doOverlayLayout()
-                                    End Sub)
-    End Sub 'Updates the color of the activity indicator
     Public Function buildGrammar() As Grammar
 
         If Game.IsInMenu Then
@@ -839,7 +818,7 @@ Public Class hsVoicePlugin
 
         ' Check if we're at the mulligan, if so only the mulligan grammar will be returned
         If (Not mulliganDone) And (Not Game.IsMulliganDone) Then
-            writeLog("IsMulliganDone=True - Building mulligan grammar")
+            writeLog("IsMulliganDone=False - Building mulligan grammar")
             Dim mulliganBuilder As New GrammarBuilder
             mulliganBuilder.Append(New SemanticResultKey("action", New SemanticResultValue("click", "mulligan")))
             Dim mulliganChoices As New Choices
@@ -854,18 +833,31 @@ Public Class hsVoicePlugin
 
         writeLog("Started building game grammar")
 
-        Dim heroPowerEntity As Entity = Entities.First(Function(x)
-                                                           Dim cardType = x.GetTag(GAME_TAG.CARDTYPE)
-                                                           Dim cardTroller = x.GetTag(GAME_TAG.CONTROLLER)
+        Dim heroChoice = New Choices(New SemanticResultValue("hero power", "hero"))
+        'Attempt to read active hero power name
 
-                                                           If cardType = Hearthstone.TAG_CARDTYPE.HERO_POWER And cardTroller = playerID Then
-                                                               Return True
-                                                           End If
+        Dim heroPowerEntity As Entity = Nothing
 
-                                                           Return False
-                                                       End Function)
-        Dim heroPowerName As String = heroPowerEntity.Card.Name
-        Dim heroChoice = New Choices(New SemanticResultValue("hero power", "hero"), New SemanticResultValue(heroPowerName, "hero"))
+        Try
+            heroPowerEntity = Entities.First(Function(x)
+                                                 Dim cardType = x.GetTag(GAME_TAG.CARDTYPE)
+                                                 Dim cardTroller = x.GetTag(GAME_TAG.CONTROLLER)
+
+                                                 If cardType = Hearthstone.TAG_CARDTYPE.HERO_POWER And cardTroller = playerID And x.IsInPlay = True Then
+                                                     Return True
+                                                 End If
+
+                                                 Return False
+                                             End Function)
+        Catch ex As Exception
+            writeLog("Hero power not found!")
+        End Try
+        If Not IsNothing(heroPowerEntity) Then
+            Dim heroPowerName As String = heroPowerEntity.Card.Name
+            heroChoice.Add(New SemanticResultValue(heroPowerName, "hero"))
+        End If
+
+
 
         'build grammar for card actions
         If cardGrammar.DebugShowPhrases.Count Then
@@ -1097,4 +1089,31 @@ Public Class hsVoicePlugin
             voiceLog = Nothing
         End If
     End Sub 'Writes information to the debug output and the logfile if necessary
+    Public Sub hotkeyWorker_DoWork() Handles hotkeyWorker.DoWork
+
+        Do
+
+            Dim hotkeyState As Short = GetAsyncKeyState(Keys.F12)
+            If hotkeyState = 1 Or hotkeyState = Int16.MinValue Then
+                ToggleSpeech()
+                Sleep(500)
+            End If
+
+        Loop
+
+    End Sub
+    Public Sub ToggleSpeech()
+        If sreListen Then
+            sreListen = False
+            hsRecog.RecognizeAsyncCancel()
+            updateStatusText(Nothing)
+        Else
+            sreListen = True
+            updateStatusText(Nothing)
+            If hsRecog.Grammars.Count = 0 Then
+                hsRecog.LoadGrammar(buildGrammar)
+            End If
+            hsRecog.RecognizeAsync(RecognizeMode.Multiple)
+        End If
+    End Sub
 End Class

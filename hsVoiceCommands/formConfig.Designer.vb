@@ -31,7 +31,6 @@ Partial Class formConfig
         Me.checkQuick = New System.Windows.Forms.CheckBox()
         Me.comboStatusPos = New System.Windows.Forms.ComboBox()
         Me.checkShowStatus = New System.Windows.Forms.CheckBox()
-        Me.checkShowLight = New System.Windows.Forms.CheckBox()
         Me.checkDebugLog = New System.Windows.Forms.CheckBox()
         Me.groupRecog.SuspendLayout()
         CType(Me.numThreshold, System.ComponentModel.ISupportInitialize).BeginInit()
@@ -42,7 +41,7 @@ Partial Class formConfig
         '
         Me.groupRecog.Controls.Add(Me.numThreshold)
         Me.groupRecog.Controls.Add(Me.Label1)
-        Me.groupRecog.Location = New System.Drawing.Point(8, 119)
+        Me.groupRecog.Location = New System.Drawing.Point(8, 100)
         Me.groupRecog.Name = "groupRecog"
         Me.groupRecog.Size = New System.Drawing.Size(218, 42)
         Me.groupRecog.TabIndex = 3
@@ -69,7 +68,7 @@ Partial Class formConfig
         '
         'buttonSave
         '
-        Me.buttonSave.Location = New System.Drawing.Point(151, 167)
+        Me.buttonSave.Location = New System.Drawing.Point(151, 148)
         Me.buttonSave.Name = "buttonSave"
         Me.buttonSave.Size = New System.Drawing.Size(75, 23)
         Me.buttonSave.TabIndex = 4
@@ -79,7 +78,7 @@ Partial Class formConfig
         'checkLast
         '
         Me.checkLast.AutoSize = True
-        Me.checkLast.Location = New System.Drawing.Point(6, 65)
+        Me.checkLast.Location = New System.Drawing.Point(6, 44)
         Me.checkLast.Name = "checkLast"
         Me.checkLast.Size = New System.Drawing.Size(168, 17)
         Me.checkLast.TabIndex = 5
@@ -92,10 +91,9 @@ Partial Class formConfig
         Me.groupSettings.Controls.Add(Me.comboStatusPos)
         Me.groupSettings.Controls.Add(Me.checkShowStatus)
         Me.groupSettings.Controls.Add(Me.checkLast)
-        Me.groupSettings.Controls.Add(Me.checkShowLight)
         Me.groupSettings.Location = New System.Drawing.Point(8, 3)
         Me.groupSettings.Name = "groupSettings"
-        Me.groupSettings.Size = New System.Drawing.Size(218, 110)
+        Me.groupSettings.Size = New System.Drawing.Size(218, 91)
         Me.groupSettings.TabIndex = 6
         Me.groupSettings.TabStop = False
         Me.groupSettings.Text = "HDT-Voice Settings"
@@ -103,7 +101,7 @@ Partial Class formConfig
         'checkQuick
         '
         Me.checkQuick.AutoSize = True
-        Me.checkQuick.Location = New System.Drawing.Point(6, 88)
+        Me.checkQuick.Location = New System.Drawing.Point(6, 67)
         Me.checkQuick.Name = "checkQuick"
         Me.checkQuick.Size = New System.Drawing.Size(167, 17)
         Me.checkQuick.TabIndex = 8
@@ -123,27 +121,17 @@ Partial Class formConfig
         'checkShowStatus
         '
         Me.checkShowStatus.AutoSize = True
-        Me.checkShowStatus.Location = New System.Drawing.Point(6, 42)
+        Me.checkShowStatus.Location = New System.Drawing.Point(6, 21)
         Me.checkShowStatus.Name = "checkShowStatus"
         Me.checkShowStatus.Size = New System.Drawing.Size(104, 17)
         Me.checkShowStatus.TabIndex = 7
         Me.checkShowStatus.Text = "Show status text"
         Me.checkShowStatus.UseVisualStyleBackColor = True
         '
-        'checkShowLight
-        '
-        Me.checkShowLight.AutoSize = True
-        Me.checkShowLight.Location = New System.Drawing.Point(6, 19)
-        Me.checkShowLight.Name = "checkShowLight"
-        Me.checkShowLight.Size = New System.Drawing.Size(106, 17)
-        Me.checkShowLight.TabIndex = 7
-        Me.checkShowLight.Text = "Show status light"
-        Me.checkShowLight.UseVisualStyleBackColor = True
-        '
         'checkDebugLog
         '
         Me.checkDebugLog.AutoSize = True
-        Me.checkDebugLog.Location = New System.Drawing.Point(14, 171)
+        Me.checkDebugLog.Location = New System.Drawing.Point(14, 152)
         Me.checkDebugLog.Name = "checkDebugLog"
         Me.checkDebugLog.Size = New System.Drawing.Size(108, 17)
         Me.checkDebugLog.TabIndex = 7
@@ -154,7 +142,7 @@ Partial Class formConfig
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(236, 198)
+        Me.ClientSize = New System.Drawing.Size(236, 180)
         Me.Controls.Add(Me.groupSettings)
         Me.Controls.Add(Me.buttonSave)
         Me.Controls.Add(Me.checkDebugLog)
@@ -182,7 +170,6 @@ Partial Class formConfig
     Friend WithEvents groupSettings As System.Windows.Forms.GroupBox
     Friend WithEvents checkDebugLog As System.Windows.Forms.CheckBox
     Friend WithEvents comboStatusPos As System.Windows.Forms.ComboBox
-    Friend WithEvents checkShowLight As System.Windows.Forms.CheckBox
     Friend WithEvents checkShowStatus As System.Windows.Forms.CheckBox
     Friend WithEvents checkQuick As System.Windows.Forms.CheckBox
 End Class

@@ -5,7 +5,6 @@
         My.Settings.statusTextPos = comboStatusPos.SelectedIndex
         My.Settings.showLast = checkLast.Checked
         My.Settings.outputDebug = checkDebugLog.Checked
-        My.Settings.showStatusLight = checkShowLight.Checked
         My.Settings.quickPlay = checkQuick.Checked
 
         'Recognition settings
@@ -28,7 +27,6 @@
 
         checkDebugLog.Checked = My.Settings.showLast
 
-        checkShowLight.Checked = My.Settings.showStatusLight
 
         checkQuick.Checked = My.Settings.quickPlay
 
