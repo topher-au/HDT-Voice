@@ -91,15 +91,23 @@ Public Class hsVoicePlugin
 
         'Attempt to initialize speech recognition
         Try
-            hsRecog = New SpeechRecognitionEngine
+
+            Dim rec As IReadOnlyCollection(Of RecognizerInfo) = SpeechRecognitionEngine.InstalledRecognizers
+            writeLog("Installed recognizers: " & rec.Count)
+            For Each e In rec
+                writeLog(e.Culture.Name)
+            Next
+            writeLog("Initializing recognizer for: " & rec.First.Culture.Name)
+            hsRecog = New SpeechRecognitionEngine(New Globalization.CultureInfo(rec.First.Culture.Name))
             hsRecog.SetInputToDefaultAudioDevice()
             hsRecog.BabbleTimeout = New TimeSpan(0, 0, 3)
             hsRecog.InitialSilenceTimeout = New TimeSpan(0, 0, 3)
+            writeLog("Successfuly started speech recognition")
         Catch ex As Exception
             writeLog("Error initializing speech recognition: " & ex.Message)
-            MsgBox("An error occurred initializing speech recognition: " & vbNewLine & ex.Message, vbOK, "HDT-Voice")
+            MsgBox("An error occurred initializing speech recognition: " & vbNewLine & ex.Message, vbOKOnly + vbCritical, "HDT-Voice")
         End Try
-        writeLog("Successfuly started speech recognition")
+
 
         ' Initialize output displays
         hdtStatus = New HearthstoneTextBlock
@@ -168,7 +176,7 @@ Public Class hsVoicePlugin
             actionInProgress = False
             Return
         End If
-        updateStatusText("Executing """ & e.Result.Text & """...")
+        updateStatusText("Heard """ & e.Result.Text & """")
         writeLog("Command recognized """ & e.Result.Text & """ - executing action")
         Do While actionInProgress
             'Loop if another command is executing or we get BUGS
@@ -183,23 +191,23 @@ Public Class hsVoicePlugin
         If Debugger.IsAttached Then 'debug only commands
             If e.Result.Text = "debug show cards" Then
                 For i = 1 To handCards.Count
-                    moveCursorToTarget("c" & i.ToString.Trim)
+                    moveCursorToEntity(handCards.Item(i - 1).Id)
                     Sleep(500)
                 Next
             End If
             If e.Result.Text = "debug show friendlies" Then
                 For i = 1 To boardFriendly.Count
-                    moveCursorToTarget("f" & i.ToString.Trim)
+                    moveCursorToEntity(boardFriendly.Item(i - 1).Id)
                     Sleep(500)
                 Next
-                moveCursorToTarget("h1")
+                moveCursorToEntity(PlayerEntity.Id)
             End If
             If e.Result.Text = "debug show enemies" Then
                 For i = 1 To boardOpposing.Count
-                    moveCursorToTarget("e" & i.ToString.Trim)
+                    moveCursorToEntity(boardOpposing.Item(i - 1).Id)
                     Sleep(500)
                 Next
-                moveCursorToTarget("h2")
+                moveCursorToEntity(OpponentEntity.Id)
             End If
         End If
 
@@ -350,15 +358,15 @@ Public Class hsVoicePlugin
         End If
         If e.Result.Semantics.ContainsKey("card") Then
             Dim targetName = e.Result.Semantics("card").Value
-            moveCursorToTarget(targetName)
+            moveCursorToEntity(targetName)
         End If
         If e.Result.Semantics.ContainsKey("friendly") Then
             Dim targetName = e.Result.Semantics("friendly").Value
-            moveCursorToTarget(targetName)
+            moveCursorToEntity(targetName)
         End If
         If e.Result.Semantics.ContainsKey("opposing") Then
             Dim targetName = e.Result.Semantics("opposing").Value
-            moveCursorToTarget(targetName)
+            moveCursorToEntity(targetName)
         End If
         sendLeftClick()
         Sleep(100)
@@ -421,16 +429,16 @@ Public Class hsVoicePlugin
     End Sub ' handle menu commands
     Private Sub doHero(e As SpeechRecognizedEventArgs)
         If e.Result.Semantics.ContainsKey("friendly") Then
-            Dim friendlyName = e.Result.Semantics("friendly").Value
+            Dim friendlyID = e.Result.Semantics("friendly").Value
             moveCursor(62, 76)
             startDrag()
-            moveCursorToTarget(friendlyName)
+            moveCursorToEntity(friendlyID)
             endDrag()
         ElseIf e.Result.Semantics.ContainsKey("opposing") Then
-            Dim friendlyName = e.Result.Semantics("opposing").Value
+            Dim opposingID = e.Result.Semantics("opposing").Value
             moveCursor(62, 76)
             startDrag()
-            moveCursorToTarget(friendlyName)
+            moveCursorToEntity(opposingID)
             endDrag()
         Else
             moveCursor(62, 76)
@@ -439,18 +447,17 @@ Public Class hsVoicePlugin
         Sleep(100)
     End Sub 'handle hero powers
     Private Sub doAttack(e As SpeechRecognizedEventArgs)
-        If e.Result.Semantics.ContainsKey("opposing") Then
-            'attack minion
-            Dim friendlyName = e.Result.Semantics("friendly").Value
-            Dim targetName = e.Result.Semantics("opposing").Value
-            moveCursorToTarget(friendlyName)
+        If e.Result.Semantics.ContainsKey("opposing") Then ' Target is a minion
+
+            Dim myMinion = e.Result.Semantics("friendly").Value
+            Dim targetMinion = e.Result.Semantics("opposing").Value
+            moveCursorToEntity(myMinion)
             startDrag()
-            moveCursorToTarget(targetName)
+            moveCursorToEntity(targetMinion)
             endDrag()
-        Else
-            'attack face
-            Dim friendlyName = e.Result.Semantics("friendly").Value
-            moveCursorToTarget(friendlyName)
+        Else ' Not a minion, attack face
+            Dim myMinion = e.Result.Semantics("friendly").Value
+            moveCursorToEntity(myMinion)
             startDrag()
             moveCursor(50, 20)
             endDrag()
@@ -458,31 +465,30 @@ Public Class hsVoicePlugin
         Sleep(100)
     End Sub 'handle attacking
     Private Sub doPlay(e As SpeechRecognizedEventArgs)
-        Dim myTarget = e.Result.Semantics("card").Value
-        Dim cardNum = e.Result.Semantics("card").Value.ToString.Substring(1)
-        Dim cardType = handCards.Item(cardNum - 1).Card.Type
+        Dim myCard = e.Result.Semantics("card").Value
+        Dim cardType = handCards.First(Function(x) x.Id = myCard).Card.Type
 
         If e.Result.Semantics.ContainsKey("friendly") Then 'Play card to friendly target
             Dim destTarget = e.Result.Semantics("friendly").Value
             If cardType = "Minion" Then 'Card is a minion
                 Dim newTarget = destTarget.ToString.Substring(1) - 1
-                dragTargetToTarget(myTarget, "f" & newTarget.ToString.Trim) 'Play to the left of friendly target
+                dragTargetToTarget(myCard, "f" & newTarget.ToString.Trim) 'Play to the left of friendly target
             Else 'Card is a spell
-                dragTargetToTarget(myTarget, destTarget) 'Direct drag to target
+                dragTargetToTarget(myCard, destTarget) 'Direct drag to target
             End If
 
 
         ElseIf e.Result.Semantics.ContainsKey("opposing") Then 'Play card to opposing target
             Dim targetName = e.Result.Semantics("opposing").Value
-            dragTargetToTarget(myTarget, targetName)
+            dragTargetToTarget(myCard, targetName)
         Else 'Play card with no target
             If cardType = "Minion" Then
-                moveCursorToTarget(myTarget)
+                moveCursorToEntity(myCard)
                 startDrag()
                 moveCursor(85, 55) 'play to right of board
                 endDrag()
             Else
-                moveCursorToTarget(myTarget)
+                moveCursorToEntity(myCard)
                 startDrag()
                 moveCursor(40, 75) 'play to board
                 endDrag()
@@ -493,8 +499,8 @@ Public Class hsVoicePlugin
     End Sub
     Private Sub doMulligan(e As SpeechRecognizedEventArgs)
         If e.Result.Semantics.ContainsKey("card") Then
-            Dim targetName = e.Result.Semantics("card").Value
-            Dim targetNum = Convert.ToInt32(targetName.ToString.Substring(1))
+            Dim targetID = e.Result.Semantics("card").Value
+            Dim targetNum = Entities.First(Function(x) x.Id = targetID).GetTag(GAME_TAG.ZONE_POSITION)
             If Game.OpponentHasCoin Then
                 moveCursorToOption(targetNum, 3)
                 sendLeftClick()
@@ -514,17 +520,17 @@ Public Class hsVoicePlugin
             If e.Result.Semantics("heropower").Value = "hero" Then x = 50 Else x = 60
             moveCursor(x, y)
         End If
-        If e.Result.Semantics.ContainsKey("card") Then
+        If e.Result.Semantics.ContainsKey("card") Then 'target card
             Dim targetName = e.Result.Semantics("card").Value
-            moveCursorToTarget(targetName)
+            moveCursorToEntity(targetName)
         End If
-        If e.Result.Semantics.ContainsKey("friendly") Then
+        If e.Result.Semantics.ContainsKey("friendly") Then 'target friendly
             Dim targetName = e.Result.Semantics("friendly").Value
-            moveCursorToTarget(targetName)
+            moveCursorToEntity(targetName)
         End If
-        If e.Result.Semantics.ContainsKey("opposing") Then
+        If e.Result.Semantics.ContainsKey("opposing") Then 'target opposing
             Dim targetName = e.Result.Semantics("opposing").Value
-            moveCursorToTarget(targetName)
+            moveCursorToEntity(targetName)
         End If
     End Sub 'handle targeting cursor
 
@@ -549,54 +555,18 @@ Public Class hsVoicePlugin
         mouse_event(MOUSE_LEFTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0)
         Sleep(100)
     End Sub
-    Public Sub dragTargetToTarget(startTarget As String, endTarget As String)
-        moveCursorToTarget(startTarget)
+    Public Sub dragTargetToTarget(startEntity As Integer, endEntity As String)
+        moveCursorToEntity(startEntity)
         startDrag()
-        moveCursorToTarget(endTarget)
+        moveCursorToEntity(endEntity)
         endDrag()
     End Sub
     Public Sub moveCursorToOption(optionNum As Integer, totalOptions As Integer)
-        Dim optionsWidth As Integer = totalOptions * 20
-        Dim myOption As Integer = (optionNum * 20) - 10
+        Dim optionSize As Integer = 20
+        Dim optionsWidth As Integer = totalOptions * optionSize
+        Dim myOption As Integer = (optionNum * optionSize) - (optionSize / 2)
         Dim optionStart As Integer = 50 - (optionsWidth / 2)
         moveCursor(optionStart + myOption, 50)
-    End Sub
-    Public Sub moveCursorToTarget(TargetName As String)
-        'Reads a target returned by the speech recognition semantic key
-        Select Case TargetName.Substring(0, 1)
-            Case "c" ' Target is a card
-                Dim cardNum = Convert.ToInt32(TargetName.Substring(1))
-                Dim totalCards = handCards.Count
-                Dim handwidth = If(totalCards < 4, 10 * totalcards, 38)
-
-                Dim x = (((cardNum) / (totalCards)) * handwidth) - (handwidth / 2) -0.8
-                Dim y = (x * -0.16) ^ 2
-                moveCursor(x + 44, y + 89)
-            Case "f" ' Target is a friendly minion
-                Dim tarMinion = Convert.ToInt32(TargetName.Substring(1))
-                Dim allMinions = boardFriendly.Count
-
-                Dim allWidth = allMinions * 9.5
-                Dim myMinion = tarMinion * 9.5 - 6
-
-                Dim minX = 49 - (allWidth / 2) + myMinion
-                moveCursor(minX, 55)
-            Case "e" ' Target is an enemy minion
-                Dim tarMinion = Convert.ToInt32(TargetName.Substring(1))
-                Dim allMinions = boardOpposing.Count
-
-                Dim allWidth = allMinions * 9
-                Dim myMinion = tarMinion * 9
-
-                Dim minX = 50 - (allWidth / 2) + myMinion - 5
-                moveCursor(minX, 40)
-            Case "h" ' Target is a hero
-                If TargetName.Substring(1) = 1 Then
-                    moveCursor(50, 75)
-                Else
-                    moveCursor(50, 20)
-                End If
-        End Select
     End Sub
     Public Sub moveCursor(xPercent As Integer, yPercent As Integer)
         'First, find the Hearthstone window and it's size
@@ -604,17 +574,11 @@ Public Class hsVoicePlugin
         Dim rectHS As RECT
         GetWindowRect(hWndHS, rectHS)
 
-        Dim overlayWidth = overlayCanvas.Dispatcher.Invoke(Function()
-                                                               Return overlayCanvas.Width
-                                                           End Function)
-        Dim overlayHeight = overlayCanvas.Dispatcher.Invoke(Function()
-                                                                Return overlayCanvas.Height
-                                                            End Function)
-
+        Dim windowWidth = rectHS.Right - rectHS.Left
         Dim uiHeight = rectHS.Bottom - rectHS.Top
-        Dim uiWidth = ((uiheight) / 3) * 4 ' A 4:3 square in the center
+        Dim uiWidth = ((uiHeight) / 3) * 4 ' A 4:3 square in the center
 
-        Dim xOffset = (overlayWidth - uiWidth) / 2 ' The space on the side of the game UI
+        Dim xOffset = (windowWidth - uiWidth) / 2 ' The space on the side of the game UI
 
         Dim cursorX As Integer = (xPercent / 100) * uiWidth + xOffset + rectHS.Left
         Dim cursorY As Integer = (yPercent / 100) * uiHeight + rectHS.Top + 8
@@ -622,6 +586,67 @@ Public Class hsVoicePlugin
         Cursor.Position = New Point(cursorX, cursorY)
         Sleep(100)
     End Sub
+
+    Public Function moveCursorToEntity(EntityID As Integer)
+        Dim targetEntity As Entity
+
+        Try 'Try and find the entity in the game
+            targetEntity = Entities.First(Function(x) x.Id = EntityID)
+        Catch ex As Exception
+            Return False
+        End Try
+
+        'First, check if the entity is a card in our hand
+        If targetEntity.IsInHand And targetEntity.GetTag(GAME_TAG.CONTROLLER) = playerID Then
+            Dim cardNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
+            Dim totalCards As Integer = handCards.Count
+            Dim handwidth = If(totalCards < 4, 10 * totalCards, 38)
+
+            Dim x = (((cardNum) / (totalCards)) * handwidth) - (handwidth / 2) - 0.8
+            Dim y = (x * -0.16) ^ 2
+            moveCursor(x + 44, y + 89)
+            Return True
+        End If
+
+        'Next, check whether it is a friendly minion
+        If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GAME_TAG.CONTROLLER) = playerID Then
+            Dim minionNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
+            Dim totalMinions As Integer = boardFriendly.Count
+            Dim totalWidth = totalMinions * 9
+            Dim minionX = minionNum * 9
+
+            Dim minX = 50 - (totalWidth / 2) + minionX - 6
+            moveCursor(minX, 55)
+            Return True
+        End If
+
+        'Then, check whether it is an opposing minion
+        If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GAME_TAG.CONTROLLER) = opponentID Then
+            Dim minionNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
+            Dim totalMinions As Integer = boardopposing.Count
+            Dim totalWidth = totalMinions * 9
+            Dim minionX = minionNum * 9
+
+            Dim minX = 50 - (totalWidth / 2) + minionX - 5
+            moveCursor(minX, 40)
+            Return True
+
+        End If
+
+        'Finally, check whether it is a hero
+        If targetEntity.IsPlayer Then
+            moveCursor(50, 75)
+            Return True
+        End If
+
+        If targetEntity.IsOpponent Then
+            moveCursor(50, 20)
+            Return True
+        End If
+
+        Return False 'failed to locate entity on the board
+
+    End Function
 
     'Miscellaneous functions
     Public Function checkActiveWindow()
@@ -735,17 +760,17 @@ Public Class hsVoicePlugin
                 Dim CardInstances = handCards.FindAll(Function(x) x.CardId = e.CardId)
                 If CardInstances.Count > 1 Then ' if we have multiple cards with the same name, add a numeric identifier
                     If Not handGrammarNames.ToGrammarBuilder.DebugShowPhrases.Contains(CardName) Then
-                        handGrammarNames.Add(New SemanticResultValue(CardName, "c" & (handCards.IndexOf(e) + 1).ToString))
-                        handGrammarNumbers.Add(New SemanticResultValue(e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, "c" & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim))
+                        handGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
+                        handGrammarNumbers.Add(New SemanticResultValue(e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
                     Else
                         Dim CardNum As Integer = CardInstances.IndexOf(CardInstances.Find(Function(x) x.Id = e.Id)) + 1
                         CardName &= " " & CardNum.ToString
-                        handGrammarNames.Add(New SemanticResultValue(CardName, "c" & (handCards.IndexOf(e) + 1).ToString))
-                        handGrammarNumbers.Add(New SemanticResultValue(e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, "c" & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim))
+                        handGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
+                        handGrammarNumbers.Add(New SemanticResultValue(e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
                     End If
                 Else
-                    handGrammarNames.Add(New SemanticResultValue(CardName, "c" & (handCards.IndexOf(e) + 1).ToString))
-                    handGrammarNumbers.Add(New SemanticResultValue(e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, "c" & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim))
+                    handGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
+                    handGrammarNumbers.Add(New SemanticResultValue(e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
                 End If
 
             Next
@@ -765,25 +790,27 @@ Public Class hsVoicePlugin
                 If CardInstances.Count > 1 Then ' More than one instance of the card on the board, append a number
                     'If it's not in the grammar already, add an un-numbered minion
                     If Not friendlyGrammarNames.ToGrammarBuilder.DebugShowPhrases.Contains(CardName) Then
-                        friendlyGrammarNames.Add(New SemanticResultValue(CardName, "f" & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim))
-                        friendlyGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, "f" & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim))
+                        friendlyGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
+                        friendlyGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
                     End If
                     Dim CardNum As Integer = CardInstances.IndexOf(CardInstances.Find(Function(x) x.Id = e.Id)) + 1
                     CardName &= " " & CardNum.ToString
 
                 End If
-                friendlyGrammarNames.Add(New SemanticResultValue(CardName, "f" & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim))
-                friendlyGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, "f" & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim))
+                friendlyGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
+                friendlyGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
             Next
-            friendlyGrammarNumbers.Add(New SemanticResultValue("minion " & (boardFriendly.Count + 1).ToString.Trim, "f" & (boardFriendly.Count + 1).ToString.Trim))
             friendlyChoices.Add(friendlyGrammarNames, friendlyGrammarNumbers)
         End If
 
-        Dim friendlyHero As New Choices
-        friendlyHero.Add(New SemanticResultValue("hero", "h1"))
-        friendlyHero.Add(New SemanticResultValue("face", "h1"))
-        friendlyChoices.Add(friendlyHero)
-        friendlyGrammar.Append(New SemanticResultKey("friendly", friendlyChoices))
+        If Not IsNothing(PlayerEntity) Then
+            Dim friendlyHero As New Choices
+            friendlyHero.Add(New SemanticResultValue("hero", PlayerEntity.Id))
+            friendlyHero.Add(New SemanticResultValue("face", PlayerEntity.Id))
+            friendlyChoices.Add(friendlyHero)
+            friendlyGrammar.Append(New SemanticResultKey("friendly", friendlyChoices))
+        End If
+
 
         ' Build grammar for opposing minions and hero
         Dim opposingGrammar As New GrammarBuilder
@@ -796,28 +823,32 @@ Public Class hsVoicePlugin
                 Dim CardInstances = boardOpposing.FindAll(Function(x) x.CardId = e.CardId)
                 If CardInstances.Count > 1 Then
                     If Not opposingGrammarNames.ToGrammarBuilder.DebugShowPhrases.Contains(CardName) Then
-                        opposingGrammarNames.Add(New SemanticResultValue(CardName, "e" & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim))
-                        opposingGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, "e" & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim))
+                        opposingGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
+                        opposingGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
                     End If
                     Dim CardNum As Integer = CardInstances.IndexOf(CardInstances.Find(Function(x) x.Id = e.Id)) + 1
                     CardName &= " " & CardNum.ToString
                 End If
-                opposingGrammarNames.Add(New SemanticResultValue(CardName, "e" & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim))
-                opposingGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, "e" & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim))
+                opposingGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
+                opposingGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
             Next
             opposingChoices.Add(opposingGrammarNames, opposingGrammarNumbers)
         End If
-        Dim opposingHero As New Choices
-        opposingHero.Add(New SemanticResultValue("hero", "h2"))
-        opposingHero.Add(New SemanticResultValue("face", "h2"))
-        opposingChoices.Add(opposingHero)
-        opposingGrammar.Append(New SemanticResultKey("opposing", New Choices(opposingChoices)))
+
+        If Not IsNothing(OpponentEntity) Then
+            Dim opposingHero As New Choices
+            opposingHero.Add(New SemanticResultValue("hero", OpponentEntity.Id))
+            opposingHero.Add(New SemanticResultValue("face", OpponentEntity.Id))
+            opposingChoices.Add(opposingHero)
+            opposingGrammar.Append(New SemanticResultKey("opposing", New Choices(opposingChoices)))
+        End If
+
 
         ' Start building the final grammar
         Dim finalChoices As New Choices
 
         ' Check if we're at the mulligan, if so only the mulligan grammar will be returned
-        If (Not mulliganDone) And (Not Game.IsMulliganDone) Then
+        If not Game.IsMulliganDone Then
             writeLog("IsMulliganDone=False - Building mulligan grammar")
             Dim mulliganBuilder As New GrammarBuilder
             mulliganBuilder.Append(New SemanticResultKey("action", New SemanticResultValue("click", "mulligan")))
@@ -1028,7 +1059,8 @@ Public Class hsVoicePlugin
         Try
             Return New Grammar(New GrammarBuilder(finalChoices))
         Catch ex As Exception
-            Return New Grammar(New GrammarBuilder("error"))
+            writeLog("Exception when building grammar: " & ex.Message)
+            Return New Grammar(New GrammarBuilder("gramar error"))
         End Try
 
 
@@ -1113,7 +1145,12 @@ Public Class hsVoicePlugin
             If hsRecog.Grammars.Count = 0 Then
                 hsRecog.LoadGrammar(buildGrammar)
             End If
-            hsRecog.RecognizeAsync(RecognizeMode.Multiple)
+            Try
+                hsRecog.RecognizeAsync(RecognizeMode.Multiple)
+            Catch ex As Exception
+
+            End Try
+
         End If
     End Sub
 End Class
