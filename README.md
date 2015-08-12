@@ -1,108 +1,153 @@
-<h2>What is HDT-Voice?</h2>
+# What is HDT-Voice?
 HDT-Voice is a plugin for Hearthstone Deck Tracker that allows you to play the game and navigate the menus using simple voice commands.
 
-<h2>What's new in this version</h2>
-<b>Features</b>
-- Hero power may now also be called by it's name, i.e. "Armor Up" or "Lesser Heal"
-- Plugin will (hopefully) be better at keeping track of which card and minion is where
+# What's new in this version
+- Toggle the plugin on and off using the F12 key
+- Lots of additions to the grammar table, see below.
+- Bugfixes
 
-<h2>Sounds good, how do I get it?</h2>
-The latest version of HDT-Voice will always be available here:
-https://github.com/topher-au/HDT-Voice/releases
+# Requirements and Download
 
-Since HDT-Voice is a plugin for Hearthstone Deck Tracker, you'll also need to download and configure it before you are able to use HDT-Voice.
+The requirements for HDT-Voice are as follows:
+- [HDT-Voice plugin (download here)](https://github.com/topher-au/HDT-Voice/releases)
+- [Hearthstone Deck Tracker](https://github.com/Epix37/Hearthstone-Deck-Tracker)
+- [Microsoft Speech Recognition engine](https://www.google.com/?q=install+microsoft+speech+recognition)
 
-Hearthstone Deck Tracker is available from:
-https://github.com/Epix37/Hearthstone-Deck-Tracker/releases
+# Installation Instructions
 
-<h2>OK, I got the download, now what?</h2>
+1. Download and extract the HDT-Voice plugin file from above
+2. Copy it into the Hearthstone Deck Tracker\plugins folder
+3. Right click HDT-Voice.dll and click properties
+<p>![An image of the Windows Explorer context menu for HDT-Voice.dll](http://i.imgur.com/KBZMKog.png)</p>
+4. At the bottom of the properties windows, check "Unblock" to allow Windows to run the plugin
+<p>![An image of the Windows Explorer properties pane showing the Unblock checkbox](http://i.imgur.com/ZNtWyma.png)</p>
+5. Load up Hearthstone Deck Tracker and select options at the top of the window
+<p>![An image showing where to find the options button](http://i.imgur.com/cYJ6eF7.png)</p>
+6. Choose plugins on the left and the select HDT-Voice and move the slider to enable the plugin
+<p>![A view of the Hearthstone Deck Tracker settings window](http://i.imgur.com/Hl2vxBg.png)</p>
+7. Click Settings to change some basic settings
+<p>![The Settings window for HDT-Voice](http://i.imgur.com/FNVp9Lx.png)</p>
+8. If all has gone successfully, you should now see "HDT-Voice: Listening... on your Hearthstone Deck Tracker overlay
 
-To install, simply copy HDT-Voice.dll into your Hearthstone Deck Tracker plugins folder, then right click and select Properties and check "Unblock" at the bottom of the panel.
 
-Once you have installed the DLL file, open Hearthstone Deck Tracker and go to the Options menu. Select Plugins, then select HDT-Voice and click "Enable".
+# Commands
 
-Click the "Configure" button to select the audio device that HDT-Voice will use to receive voice commands (NYI: default audio device only), as well as adjust the threshold for voice recognition.
+## Menu Mode
 
-Once you've completed the above steps, next time you load Hearthstone you should see "HDT-Voice: Listening..." in the upper left hand corner of the window. That means that everything has worked and you should now be able to use voice commands in Hearthstone!
+Since it is impossible to tell which menu the game is on, all of the following commands are available at any time.
 
-<h2>I've done all that, now how do I attack face?!</h2>
-Good thing you asked! The first thing you need to know is that the plugin operates in two different modes: <i>menu mode</i> and <i>game mode</i>.
+### Main Menu
+Command | Action
+-------|--------
+play | Open play mode menu
+solo | Open solo adventures menu
+arena | Open Arena menu
+brawl | Open Tavern Brawl menu
+open packs | Open card packs
 
-<h3>Menu Mode</h3>
+### Play Menu
+Command | Action
+-------|--------
+deck 1-9 | Select which deck to use
+basic | Switch to basic decks
+custom | Switch to custom decks
+ranked | Switch to Ranked play
+casual | Switch to Casual play
+start game | Start game with current settings
 
-From the main menu you will probably want to say...
-- <b>"Play"</b>
-- <b>"Solo"</b> (NYI)
-- <b>"Arena"</b> (NYI)
-- <b>"Brawl"</b> (no deck editor)
+### Arena Menu
+Command | Action
+-------|--------
+cancel arena | Close the purchase arena screen
+buy arena with gold | Purchase arena run with gold
+hero 1-3 | Select hero
+choose | Confirm hero selection
+card 1-3 | Draft cards
+start arena | Begin Arena run
 
-If you're at the Play menu/deck selection screen, you might want to say...
-- <b>"Basic"</b>, "Custom"</b> or"Deck 1-9"</b> to select deck
-- <b>"Casual"</b> or "Ranked" for game type
-- <b>"Start Game"</b> to start the game
-- <b>"Cancel"</b> to cancel the opponent finder
-- <b>"Back"</b> to go back
+### Brawl Menu
+Command | Action
+-------|--------
+start brawl | Start brawl
 
-Or maybe the plugin thought you said "brawl", in which case say...
-- <b>"Start Brawl"</b> to start brawl
-- <b>"Cancel"</b> to cancel the opponent finder
-- <b>"Back"</b> to go back
+### Opening card packs
+Command | Action
+-------|--------
+open top pack | Open card pack
+open bottom pack | Open card pack
+open card 1-5 | Open card (clockwise from top)
+done | Close pack
 
-<h3>Game Mode</h3>
-When referring to a card or minion, you may refer to it by it's name or by it's number.
-- <i>&lt;card&gt;</i> - a card name or number ("card 1", "card 2", "Sludge Belcher", "Armorsmith 2")
-- <i>&lt;friendly&gt;</i> - a friendly minion ("minion 3", "Sludge Belcher 2")
-- <i>&lt;enemy&gt;</i> - an enemy minion
-- <i>&lt;target&gt;</i> - a target, specify which side ("friendly minion 4", "enemy hero")
+## Game Mode
 
-The first thing you do when you start a game of Hearthstone is mulligan a card (or all of them). To do so, say one of the following:
-- <b>"click &lt;card&gt;"</b> ("click 2", "click Dr. Boom")
-- <b>"click confirm"</b>
+Key | Replace with...
+-------|--------
+&lt;card&gt; | A card number or name (e.g. "2", "Sludge Belcher", "4")
+&lt;friendly&gt; | A friendly minion name or number ("minion 4", "Kel'thuzad"), or "hero/face"
+&lt;enemy&gt; | An enemy minion name or number ("minion 6", "Dr. Boom"), or "hero/face"
+&lt;target&gt; | A target minion or hero, prefixed by whether they are friendly or enemy (i.e. "my face", "enemy hero")
 
-Once the game has started, you can perform a variety of commands as listed below.
+### Other synonyms
+Word | Also use...
+-------|--------
+friendly | my
+enemy | opposing, opponent
+hero | face
 
-<b>Cursor and Targeting</b>
-- <b>"target &lt;target&gt;"</b> ("target friendly face", "target my minion 1", "target enemy hero")
-- <b>"click &lt;target&gt;"</b> ("click my hero", "click enemy face", "target enemy hero")
-- <b>"click"</b> - send a click to the current cursor position
-- <b>"cancel"</b> - send a right click to the current cursor position
+### Mulligan
+Command | Action
+-------|--------
+click &lt;card&gt; | Toggle card for mulligan
+click confirm | Confirm selection
 
-<b>Playing Cards</b>
-- <b>"play &lt;card&gt;"</b> - play a card to the board
-- <b>"play &lt;card&gt; on &lt;friendly&gt;"</b> - play a minion to the left of the friendly minion specified
-- <b>"play &lt;card&gt; to &lt;target&gt;"</b> - play a card onto the specified target
-- <i>Quick Play:</i> You don't need to say "play card to target", just "card to target"
+### During Play
+### Cursor and targeting
+Command | Action
+-------|--------
+target &lt;target&gt; | Moves the cursor to the target ("target friendly minion 3")
+target card &lt;card&gt; | Targets the specified card in your hand
+click &lt;target&gt; | Clicks on the specified target ("click my face")
+click | Sends a click to the current cursor location
+cancel | Sends a right click
 
-<b>Using Hero Power</b> <i>(you can say the hero power's name instead of "hero power")</i>
-- <b>"use hero power"</b> - use hero power
-- <b>"use hero power on &lt;target&gt;"</b> - use hero power on specified minion<br>
-<i>Quick Play:</i> Just say "hero power" or "hero power on target"
+### Using your Hero Power
+Command | Action
+-------|--------
+hero power (on &lt;target&gt;) | Use your hero power
+&lt;hero power name&gt; (on &lt;target&gt;) | Use your hero power
 
-<b>Attacking with Minions</b>
-- <b><i>(Since you can't attack a friendly minion with an enemy minion, you don't need to specify "friendly" or "enemy" for these commands)</i></b>
-- <b>"attack &lt;enemy&gt; with &lt;friendly&gt;"</b> ("Attack Sylvanas Windrunner with Dr. Boom")
-- <b>"&lt;friendly&gt; go &lt;enemy&gt;"</b> ("Huffer go face")
+### Playing minions from hand
+Command | Action
+-------|--------
+play &lt;card&gt; | Plays a minion to the right side of the board
+&lt;card&gt; on/to &lt;target&gt; | Plays a minion to the left of the specified friendly target
 
-<b>Emotes</b>
-- <b>"say &lt;emote&gt;"</b>
-thanks/thank you, well played, greetings/hello, sorry, oops, threaten
+### Playing spells from hand
+Command | Action
+-------|--------
+play &lt;card&gt; | Uses the spell card
+&lt;card&gt; on/to &lt;target&gt; | Uses the spell card on the specified target
 
-<b>Choices and Options</b>
-- <b>"choose option &lt;x&gt; of &lt;y&gt;"</b>
-when presented with options (such as certain Druid cards), x is the option you
-want to select and y is the number of total options, up to 4.
-Say "click" afterwards to confirm your selection.
+### Attacking with minions
+Command | Action
+-------|--------
+attack &lt;enemy&gt; with &lt;friendly&gt; | ("Attack face with minion 3")
+&lt;friendly&gt; go &lt;enemy&gt; | As above, but shorter ("Huffer go face!")
 
-<b>End Turn</b>
-- <b>"end turn"</b> - ends your turn
+### Selecting card options
+Command | Action
+-------|--------
+choose option &lt;x&gt; of &lt;y&gt; | When presented with *y* options, select option *x*
 
-<h3>Synonyms!</h3>
-You can use the following synonyms:
-- hero, face
-- enemy, opposing, opponent
-- my, friendly
+### Sending emotes
+Command | Action
+-------|--------
+say &lt;emote&gt; | hello/greetings, oops, sorry, threaten, well played, thanks/thankyou
 
-<h2>Troubleshooting</h2>
+
+# Help!
 Please check that your default audio device is set to the microphone used for speech recognition and restart Hearthstone Deck Tracker. You may also want to adjust the threshold level in the settings window (available from within the HDT plugins panel)
+
+If you don't have a compatible speech recognition engine installed, you will need one. This can be enabled through your Windows settings.
 
 You can also enable the debug log and send it to me, it might help!
