@@ -137,6 +137,30 @@ Namespace My
                 Me("smoothCursor") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("2")>  _
+        Public Property cursorSpeed() As Integer
+            Get
+                Return CType(Me("cursorSpeed"),Integer)
+            End Get
+            Set
+                Me("cursorSpeed") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
+        Public Property autoListen() As Boolean
+            Get
+                Return CType(Me("autoListen"),Boolean)
+            End Get
+            Set
+                Me("autoListen") = value
+            End Set
+        End Property
     End Class
 End Namespace
 

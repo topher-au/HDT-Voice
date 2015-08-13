@@ -19,7 +19,7 @@ Public Class hsVoicePlugin
     Public Declare Function GetForegroundWindow Lib "user32" () As System.IntPtr
     Public Declare Auto Function GetWindowText Lib "user32" (ByVal hWnd As System.IntPtr, ByVal lpString As System.Text.StringBuilder, ByVal cch As Integer) As Integer
     Public Declare Sub mouse_event Lib "user32" (ByVal dwFlags As Integer, ByVal dx As Integer, ByVal dy As Integer, ByVal cButtons As Integer, ByVal dwExtraInfo As IntPtr)
-    Public Declare Function GetAsyncKeyState Lib "user32" (ByVal vkey As Integer) As Short
+    Declare Function GetAsyncKeyState Lib "user32" (ByVal vkey As Integer) As Short
 
     Const MOUSE_LEFTDOWN As UInteger = &H2
     Const MOUSE_LEFTUP As UInteger = &H4
@@ -31,15 +31,16 @@ Public Class hsVoicePlugin
         Public Right As Integer
         Public Bottom As Integer
     End Structure
-
     ' Speech recognition objects
     Public WithEvents hsRecog As SpeechRecognitionEngine
-    Public lastCommand As New String("none")
-    Public WithEvents timerReset As New Timer
-
     Public WithEvents hotkeyWorker As New BackgroundWorker
 
     Public voiceLog As IO.StreamWriter
+    Public lastCommand As New String("none")
+
+    Public WithEvents timerReset As New Timer
+
+    Public WithEvents grammarReloader As New BackgroundWorker
 
     'Overlay elements
     Public overlayCanvas As Canvas = Overlay.OverlayCanvas 'the main overlay object
@@ -110,7 +111,7 @@ Public Class hsVoicePlugin
             writeLog("Successfuly started speech recognition")
         Catch ex As Exception
             writeLog("Error initializing speech recognition: " & ex.Message)
-            MsgBox("An error occurred initializing speech recognition: " & vbNewLine & ex.Message & vbNewLine & vbNewLine & "HDT-Voice will not function.", vbOKOnly + vbCritical, "HDT-Voice")
+            MsgBox("An error occurred initializing speech recognition: " & vbNewLine & ex.Message, vbOKOnly + vbCritical, "HDT-Voice")
         End Try
 
 
@@ -157,6 +158,7 @@ Public Class hsVoicePlugin
         timerReset.Enabled = True
 
         hotkeyWorker.RunWorkerAsync() 'Start listening for hotkey
+        grammarReloader.RunWorkerAsync()
 
         ToggleSpeech()
     End Sub ' Run when the plugin is first initialized
@@ -176,8 +178,10 @@ Public Class hsVoicePlugin
             actionInProgress = False
             Return
         End If
+
         updateStatusText("Heard """ & e.Result.Text & """")
         writeLog("Command recognized """ & e.Result.Text & """ - executing action")
+
         Do While actionInProgress
             'Loop if another command is executing or we get BUGS
             Sleep(1)
@@ -192,21 +196,21 @@ Public Class hsVoicePlugin
         If Debugger.IsAttached Then 'debug only commands
             If e.Result.Text = "debug show cards" Then
                 For i = 1 To handCards.Count
-                    moveCursorToEntity(handCards.Item(i - 1).Id)
-                    Sleep(250)
+                    moveCursorToEntity(handCards.Item(i - 1).Id, 50)
+                    Sleep(500)
                 Next
             End If
             If e.Result.Text = "debug show friendlies" Then
                 For i = 1 To boardFriendly.Count
                     moveCursorToEntity(boardFriendly.Item(i - 1).Id)
-                    Sleep(250)
+                    Sleep(500)
                 Next
                 moveCursorToEntity(PlayerEntity.Id)
             End If
             If e.Result.Text = "debug show enemies" Then
                 For i = 1 To boardOpposing.Count
                     moveCursorToEntity(boardOpposing.Item(i - 1).Id)
-                    Sleep(250)
+                    Sleep(500)
                 Next
                 moveCursorToEntity(OpponentEntity.Id)
             End If
@@ -248,7 +252,7 @@ Public Class hsVoicePlugin
                     sendRightClick()
 
                 Case "end"
-                    moveCursor(91, 46) 'end turn button
+                    moveCursor(91, 46, 50) 'end turn button
                     sendLeftClick()
 
             End Select
@@ -257,8 +261,9 @@ Public Class hsVoicePlugin
 
         lastCommand = e.Result.Text 'set last command executed
         hsRecog.RequestRecognizerUpdate() 'request grammar update
-        actionInProgress = False 'end command processing
         If sreReset Then ToggleSpeech()
+        actionInProgress = False 'end command processing
+
     End Sub ' Handles processing recognized speech input
     Public Sub onUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles hsRecog.RecognizerUpdateReached
         Do While actionInProgress
@@ -301,6 +306,7 @@ Public Class hsVoicePlugin
         End If
 
         timerReset.Enabled = False
+        timerReset.Interval = 2000
     End Sub ' Resets the 
 
     'Voice command handlers
@@ -313,40 +319,40 @@ Public Class hsVoicePlugin
         Dim emote = e.Result.Semantics("emote").Value
         Select Case emote
             Case "thanks"
-                moveCursor(50, 75)
+                moveCursor(50, 75, 50)
                 sendRightClick()
                 Sleep(200)
-                moveCursor(40, 64)
+                moveCursor(40, 64, 50)
                 sendLeftClick()
             Case "well played"
-                moveCursor(50, 75)
+                moveCursor(50, 75, 50)
                 sendRightClick()
                 Sleep(200)
-                moveCursor(40, 72)
+                moveCursor(40, 72, 50)
                 sendLeftClick()
             Case "greetings"
-                moveCursor(50, 75)
+                moveCursor(50, 75, 50)
                 sendRightClick()
                 Sleep(200)
-                moveCursor(40, 80)
+                moveCursor(40, 80, 50)
                 sendLeftClick()
             Case "sorry"
-                moveCursor(50, 75)
+                moveCursor(50, 75, 50)
                 sendRightClick()
                 Sleep(200)
-                moveCursor(60, 64)
+                moveCursor(60, 64, 50)
                 sendLeftClick()
             Case "oops"
-                moveCursor(50, 75)
+                moveCursor(50, 75, 50)
                 sendRightClick()
                 Sleep(200)
-                moveCursor(60, 72)
+                moveCursor(60, 72, 50)
                 sendLeftClick()
             Case "threaten"
-                moveCursor(50, 75)
+                moveCursor(50, 75, 50)
                 sendRightClick()
                 Sleep(200)
-                moveCursor(60, 80)
+                moveCursor(60, 80, 50)
                 sendLeftClick()
         End Select
     End Sub 'handles emotes
@@ -375,108 +381,108 @@ Public Class hsVoicePlugin
     Private Sub doMenu(e As SpeechRecognizedEventArgs)
         Select Case e.Result.Semantics("menu").Value
             Case "play"
-                moveCursor(50, 31)
+                moveCursor(50, 31, 50)
                 sendLeftClick()
             Case "casual"
-                moveCursor(75, 20)
+                moveCursor(75, 20, 50)
                 sendLeftClick()
             Case "ranked"
-                moveCursor(85, 20)
+                moveCursor(85, 20, 50)
                 sendLeftClick()
             Case "basic"
-                moveCursor(23, 90)
+                moveCursor(23, 90, 50)
                 sendLeftClick()
             Case "custom"
-                moveCursor(45, 90)
+                moveCursor(45, 90, 50)
                 sendLeftClick()
             Case "start game"
-                moveCursor(80, 85)
+                moveCursor(80, 85, 50)
                 sendLeftClick()
 
             Case "solo"
-                moveCursor(50, 38)
+                moveCursor(50, 38, 50)
                 sendLeftClick()
 
             'arena commands
             Case "arena"
-                moveCursor(50, 45)
+                moveCursor(50, 45, 50)
                 sendLeftClick()
             Case "buy arena with gold"
-                moveCursor(60, 62)
+                moveCursor(60, 62, 50)
                 sendLeftClick()
             Case "cancel arena"
-                moveCursor(50, 75)
+                moveCursor(50, 75, 50)
                 sendLeftClick()
             Case "start arena"
-                moveCursor(60, 75)
+                moveCursor(60, 75, 50)
                 sendLeftClick()
             Case "hero 1"
-                moveCursor(20, 40)
+                moveCursor(20, 40, 50)
                 sendLeftClick()
             Case "hero 2"
-                moveCursor(40, 40)
+                moveCursor(40, 40, 50)
                 sendLeftClick()
             Case "hero 3"
-                moveCursor(55, 40)
+                moveCursor(55, 40, 50)
                 sendLeftClick()
             Case "card 1"
-                moveCursor(20, 40)
+                moveCursor(20, 40, 50)
                 sendLeftClick()
             Case "card 2"
-                moveCursor(40, 40)
+                moveCursor(40, 40, 50)
                 sendLeftClick()
             Case "card 3"
-                moveCursor(55, 40)
+                moveCursor(55, 40, 50)
                 sendLeftClick()
             Case "confirm"
-                moveCursor(50, 45)
+                moveCursor(50, 45, 50)
                 sendLeftClick()
 
             Case "brawl"
-                moveCursor(50, 52)
+                moveCursor(50, 52, 50)
                 sendLeftClick()
             Case "start brawl"
-                moveCursor(65, 85)
+                moveCursor(65, 85, 50)
                 sendLeftClick()
 
 
             Case "open packs"
-                moveCursor(40, 85)
+                moveCursor(40, 85, 50)
                 sendLeftClick()
             Case "open top pack"
-                moveCursor(12, 20)
+                moveCursor(12, 20, 50)
                 startDrag()
-                moveCursor(59, 49)
+                moveCursor(59, 49, 50)
                 endDrag()
             Case "open bottom pack"
-                moveCursor(12, 50)
+                moveCursor(12, 50, 50)
                 startDrag()
-                moveCursor(59, 49)
+                moveCursor(59, 49, 50)
                 endDrag()
             Case "open card 1"
-                moveCursor(60, 35)
+                moveCursor(60, 35, 50)
                 sendLeftClick()
             Case "open card 2"
-                moveCursor(80, 35)
+                moveCursor(80, 35, 50)
                 sendLeftClick()
             Case "open card 3"
-                moveCursor(70, 70)
+                moveCursor(70, 70, 50)
                 sendLeftClick()
             Case "open card 4"
-                moveCursor(50, 70)
+                moveCursor(50, 70, 50)
                 sendLeftClick()
             Case "open card 5"
-                moveCursor(40, 35)
+                moveCursor(40, 35, 50)
                 sendLeftClick()
             Case "done"
-                moveCursor(60, 50)
+                moveCursor(60, 50, 50)
                 sendLeftClick()
 
             Case "cancel"
-                moveCursor(52, 85)
+                moveCursor(52, 85, 50)
                 sendLeftClick()
             Case "back"
-                moveCursor(92, 91)
+                moveCursor(92, 91, 50)
                 sendLeftClick()
 
             Case "deck"
@@ -493,25 +499,25 @@ Public Class hsVoicePlugin
                 Dim deckY As Integer
                 deckX = 2 + (deckCol * 16)
                 deckY = 8 + (deckRow * 20)
-                moveCursor(deckX, deckY)
+                moveCursor(deckX, deckY, 50)
                 sendLeftClick()
         End Select
     End Sub ' handle menu commands
     Private Sub doHero(e As SpeechRecognizedEventArgs)
         If e.Result.Semantics.ContainsKey("friendly") Then
             Dim friendlyID = e.Result.Semantics("friendly").Value
-            moveCursor(62, 76)
+            moveCursor(62, 76, 50)
             startDrag()
-            moveCursorToEntity(friendlyID)
+            moveCursorToEntity(friendlyID, True)
             endDrag()
         ElseIf e.Result.Semantics.ContainsKey("opposing") Then
             Dim opposingID = e.Result.Semantics("opposing").Value
-            moveCursor(62, 76)
+            moveCursor(62, 76, 50)
             startDrag()
-            moveCursorToEntity(opposingID)
+            moveCursorToEntity(opposingID, True)
             endDrag()
         Else
-            moveCursor(62, 76)
+            moveCursor(62, 76, 50)
             sendLeftClick()
         End If
         Sleep(100)
@@ -521,15 +527,15 @@ Public Class hsVoicePlugin
 
             Dim myMinion = e.Result.Semantics("friendly").Value
             Dim targetMinion = e.Result.Semantics("opposing").Value
-            moveCursorToEntity(myMinion)
+            moveCursorToEntity(myMinion, True)
             startDrag()
-            moveCursorToEntity(targetMinion)
+            moveCursorToEntity(targetMinion, 50)
             endDrag()
         Else ' Not a minion, attack face
             Dim myMinion = e.Result.Semantics("friendly").Value
-            moveCursorToEntity(myMinion)
+            moveCursorToEntity(myMinion, 50)
             startDrag()
-            moveCursor(50, 20)
+            moveCursor(50, 20, 50)
             endDrag()
         End If
         Sleep(100)
@@ -541,8 +547,7 @@ Public Class hsVoicePlugin
         If e.Result.Semantics.ContainsKey("friendly") Then 'Play card to friendly target
             Dim destTarget = e.Result.Semantics("friendly").Value
             If cardType = "Minion" Then 'Card is a minion
-                Dim newTarget = destTarget.ToString.Substring(1) - 1
-                dragTargetToTarget(myCard, "f" & newTarget.ToString.Trim) 'Play to the left of friendly target
+                dragTargetToTarget(myCard, destTarget) 'Play to the left of friendly target
             Else 'Card is a spell
                 dragTargetToTarget(myCard, destTarget) 'Direct drag to target
             End If
@@ -553,14 +558,14 @@ Public Class hsVoicePlugin
             dragTargetToTarget(myCard, targetName)
         Else 'Play card with no target
             If cardType = "Minion" Then
-                moveCursorToEntity(myCard)
+                moveCursorToEntity(myCard, 50)
                 startDrag()
-                moveCursor(85, 55) 'play to right of board
+                moveCursor(85, 55, 50) 'play to right of board
                 endDrag()
             Else
-                moveCursorToEntity(myCard)
+                moveCursorToEntity(myCard, 50)
                 startDrag()
-                moveCursor(40, 75) 'play to board
+                moveCursor(40, 75, 50) 'play to board
                 endDrag()
             End If
 
@@ -579,7 +584,7 @@ Public Class hsVoicePlugin
                 sendLeftClick()
             End If
         Else
-            moveCursor(50, 80)
+            moveCursor(50, 80, 50)
             sendLeftClick()
         End If
     End Sub 'handle mulligan
@@ -588,19 +593,19 @@ Public Class hsVoicePlugin
             Dim x, y
             If e.Result.Semantics("herotarget").Value = "friendly" Then y = 80 Else y = 20
             If e.Result.Semantics("heropower").Value = "hero" Then x = 50 Else x = 60
-            moveCursor(x, y)
+            moveCursor(x, y, 50)
         End If
         If e.Result.Semantics.ContainsKey("card") Then 'target card
             Dim targetName = e.Result.Semantics("card").Value
-            moveCursorToEntity(targetName)
+            moveCursorToEntity(targetName, 50)
         End If
         If e.Result.Semantics.ContainsKey("friendly") Then 'target friendly
             Dim targetName = e.Result.Semantics("friendly").Value
-            moveCursorToEntity(targetName)
+            moveCursorToEntity(targetName, 50)
         End If
         If e.Result.Semantics.ContainsKey("opposing") Then 'target opposing
             Dim targetName = e.Result.Semantics("opposing").Value
-            moveCursorToEntity(targetName)
+            moveCursorToEntity(targetName, 50)
         End If
     End Sub 'handle targeting cursor
 
@@ -636,9 +641,9 @@ Public Class hsVoicePlugin
         Dim optionsWidth As Integer = totalOptions * optionSize
         Dim myOption As Integer = (optionNum * optionSize) - (optionSize / 2)
         Dim optionStart As Integer = 50 - (optionsWidth / 2)
-        moveCursor(optionStart + myOption, 50)
+        moveCursor(optionStart + myOption, 50, 50)
     End Sub
-    Public Sub moveCursor(xPercent As Integer, yPercent As Integer, Optional smooth As Boolean = False)
+    Public Sub moveCursor(xPercent As Integer, yPercent As Integer, Optional duration As Integer = 100)
         'First, find the Hearthstone window and it's size
         Dim hWndHS As IntPtr = FindWindow(Nothing, "Hearthstone")
         Dim rectHS As RECT
@@ -650,42 +655,38 @@ Public Class hsVoicePlugin
 
         Dim xOffset = (windowWidth - uiWidth) / 2 ' The space on the side of the game UI
 
-        Dim cursorX As Integer = (xPercent / 100) * uiWidth + xOffset + rectHS.Left
-        Dim cursorY As Integer = (yPercent / 100) * uiHeight + rectHS.Top + 8
+        Dim endX As Integer = (xPercent / 100) * uiWidth + xOffset + rectHS.Left
+        Dim endY As Integer = (yPercent / 100) * uiHeight + rectHS.Top + 8
+        Dim startY As Integer = Cursor.Position.Y
+        Dim startX As Integer = Cursor.Position.X
+        If My.Settings.smoothCursor Then
+            ' Do smooth cursor movement
+            Dim cursorX As Integer = Cursor.Position.X
+            Dim cursorY As Integer = Cursor.Position.Y
 
-        If My.Settings.smoothCursor And smooth Then
-            Dim x0 As Double = Cursor.Position.X
-            Dim y0 As Double = Cursor.Position.Y
-            Dim dx As Double = Math.Abs(cursorX - x0)
-            Dim dy As Double = Math.Abs(cursorY - y0)
+            Dim distX = endX - cursorX
+            Dim distY = endY - cursorY
 
-            Dim sx, sy, err, e2 As Double
+            Dim durationMod As short = 1.75
 
-            If x0 < cursorX Then sx = 1 Else sx = -1
-            If y0 < cursorY Then sy = 1 Else sy = -1
-            err = dx - dy
+            duration *= durationMod
 
-            For i = 1 To cursorX
-                e2 = 2 * err
-                If e2 > -dy Then
-                    err -= dy
-                    x0 += sx
-                End If
-                If e2 < dx Then
-                    err += dx
-                    y0 += sx
-                End If
-                Cursor.Position = New Point(x0, y0)
-                Sleep(10)
+            For i = 1 To duration ' Interpolate over duration
+                cursorX = startX + distX * (i / duration)
+                cursorY = startY + distY * (i / duration)
+                Cursor.Position = New Point(cursorX, cursorY)
+                Sleep(1)
             Next
-        Else ' jump straight to end point
-            Cursor.Position = New Point(cursorX, cursorY)
+
+        Else
+            ' Move cursor immediately to target
+            Cursor.Position = New Point(endX, endY)
         End If
 
         Sleep(100)
     End Sub
 
-    Public Function moveCursorToEntity(EntityID As Integer, Optional smooth As Boolean = False)
+    Public Function moveCursorToEntity(EntityID As Integer, Optional Duration As Integer = 50)
         Dim targetEntity As Entity
 
         Try 'Try and find the entity in the game
@@ -702,7 +703,7 @@ Public Class hsVoicePlugin
 
             Dim x = (((cardNum) / (totalCards)) * handwidth) - (handwidth / 2) - 0.8
             Dim y = (x * -0.16) ^ 2
-            moveCursor(x + 44, y + 89, smooth)
+            moveCursor(x + 44, y + 89, Duration)
             Return True
         End If
 
@@ -714,7 +715,7 @@ Public Class hsVoicePlugin
             Dim minionX = minionNum * 9
 
             Dim minX = 50 - (totalWidth / 2) + minionX - 6
-            moveCursor(minX, 55, smooth)
+            moveCursor(minX, 55, Duration)
             Return True
         End If
 
@@ -726,19 +727,19 @@ Public Class hsVoicePlugin
             Dim minionX = minionNum * 9
 
             Dim minX = 50 - (totalWidth / 2) + minionX - 5
-            moveCursor(minX, 40, smooth)
+            moveCursor(minX, 40, Duration)
             Return True
 
         End If
 
         'Finally, check whether it is a hero
         If targetEntity.IsPlayer Then
-            moveCursor(50, 75, smooth)
+            moveCursor(50, 75, Duration)
             Return True
         End If
 
         If targetEntity.IsOpponent Then
-            moveCursor(50, 20, smooth)
+            moveCursor(50, 20, Duration)
             Return True
         End If
 
@@ -788,7 +789,7 @@ Public Class hsVoicePlugin
     Public Sub updateStatusText(Status As String)
         If Status = Nothing Then
             onResetTimer()
-            return
+            Return
         End If
         Try
             hdtStatus.Dispatcher.Invoke(Sub()
@@ -1261,17 +1262,20 @@ Public Class hsVoicePlugin
     End Sub
     Public Sub ToggleSpeech()
         If sreListen Then
+
             sreListen = False
             hsRecog.RecognizeAsyncCancel()
-            updateStatusText(Nothing)
+            If Not actionInProgress Then _
+                updateStatusText("Stopped")
         Else
             sreListen = True
-            updateStatusText(Nothing)
             If hsRecog.Grammars.Count = 0 Then
                 hsRecog.LoadGrammar(buildGrammar)
             End If
             Try
                 hsRecog.RecognizeAsync(RecognizeMode.Multiple)
+                If Not actionInProgress Then _
+                    updateStatusText("Started")
             Catch ex As Exception
 
             End Try

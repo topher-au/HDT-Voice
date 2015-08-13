@@ -1,9 +1,10 @@
 ﻿Imports System
 Imports System.Windows.Controls
-
+Imports MahApps.Metro
 Imports Hearthstone_Deck_Tracker.Plugins
 Public Class HDTVoice
     Implements IPlugin
+
     Public ReadOnly Property Author As String Implements IPlugin.Author
         Get
             Return "Chris Sheridan"
@@ -24,7 +25,10 @@ Public Class HDTVoice
 
     Public ReadOnly Property MenuItem As MenuItem Implements IPlugin.MenuItem
         Get
-            Return Nothing
+            Dim pluginMenu As New MenuItem
+            AddHandler pluginMenu.Click, AddressOf OnButtonPress
+            pluginMenu.Header = New String("HDT-Voice Settings...")
+            Return pluginMenu
         End Get
     End Property
 
@@ -36,14 +40,13 @@ Public Class HDTVoice
 
     Public ReadOnly Property Version As Version Implements IPlugin.Version
         Get
-            Return New Version(0, 5, 1)
+            Return New Version(0, 5, 2)
         End Get
     End Property
 
     Public Sub OnButtonPress() Implements IPlugin.OnButtonPress
-        Dim fc As New formConfig
-        fc.ShowDialog()
-
+        Dim fmc = New MetroConfig
+        fmc.ShowDialog() ' Show configuration dialog
         Return
     End Sub
 
