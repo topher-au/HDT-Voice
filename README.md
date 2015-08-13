@@ -8,6 +8,6 @@ The requirements for HDT-Voice are as follows:
 - [Hearthstone Deck Tracker](https://github.com/Epix37/Hearthstone-Deck-Tracker)
 - [Microsoft Speech Recognition engine](https://www.google.com/?q=install+microsoft+speech+recognition)
 
-# Installation Instructions
+# Installation and Usage
 
-Please see the [HDT-Voice Wiki](https://github.com/topher-au/HDT-Voice/wiki) for full installation instructions.
+Please see the [HDT-Voice Wiki](https://github.com/topher-au/HDT-Voice/wiki/Installation) for full installation instructions and a detailed guide to the voice commands available.
