@@ -27,7 +27,7 @@ Public Class HDTVoice
         Get
             Dim pluginMenu As New MenuItem
             AddHandler pluginMenu.Click, AddressOf OnButtonPress
-            pluginMenu.Header = New String("HDT-Voice Settings...")
+            pluginMenu.Header = New String("HDT-Voice settings...")
             Return pluginMenu
         End Get
     End Property

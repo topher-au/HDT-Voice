@@ -161,6 +161,18 @@ Namespace My
                 Me("autoListen") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("False")>  _
+        Public Property toggleOrPTT() As Boolean
+            Get
+                Return CType(Me("toggleOrPTT"),Boolean)
+            End Get
+            Set
+                Me("toggleOrPTT") = value
+            End Set
+        End Property
     End Class
 End Namespace
 

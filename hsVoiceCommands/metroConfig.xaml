@@ -27,12 +27,22 @@
                 </Menu>
             </TabItem>
             <TabItem Header="recognizer">
-                <Menu>
+                <StackPanel>
                     <Label Content="Recognizer threshold" />
-                    <Slider Name="slideThreshold" Width="200" Minimum="20" Maximum="95" Interval="5" ValueChanged="slideThreshold_ValueChanged"/>
-                    <Label Name="labelThreshold" Content="0%" />
-                    <CheckBox Name="checkQuickPlay" Content="Enable Quick Play" />
-                </Menu>
+                    <Menu>
+                        <Slider Name="slideThreshold" Width="200" Minimum="20" Maximum="95" Interval="5" ValueChanged="slideThreshold_ValueChanged"/>
+                        <Label Name="labelThreshold" Content="0%" />
+                    </Menu>
+                    <CheckBox Name="checkQuickPlay" Content="Enable Quick Play" Margin="4"/>
+                    <Menu>
+                        <StackPanel>
+                            <Label Content="Recognizer Hotkey (F12)" />
+                            <RadioButton Name="radioToggle" Content="Toggle (F12)" Margin="4"/>
+                            <RadioButton Name="radioPTT" Content="Push-to-Talk (Left Shift)" Margin="4"/>
+                        </StackPanel>
+                    </Menu>
+                    
+                </StackPanel>
             </TabItem>
         </TabControl>
         <Menu Grid.Row="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" >

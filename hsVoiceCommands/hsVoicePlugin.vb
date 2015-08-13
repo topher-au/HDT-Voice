@@ -108,6 +108,8 @@ Public Class hsVoicePlugin
             hsRecog.SetInputToDefaultAudioDevice()
             hsRecog.BabbleTimeout = New TimeSpan(0, 0, 3)
             hsRecog.InitialSilenceTimeout = New TimeSpan(0, 0, 3)
+            hsRecog.EndSilenceTimeout = New TimeSpan(0, 0, 0, 0, 500)
+            hsRecog.EndSilenceTimeoutAmbiguous = New TimeSpan(0, 0, 0, 0, 500)
             writeLog("Successfuly started speech recognition")
         Catch ex As Exception
             writeLog("Error initializing speech recognition: " & ex.Message)
@@ -160,11 +162,23 @@ Public Class hsVoicePlugin
         hotkeyWorker.RunWorkerAsync() 'Start listening for hotkey
         grammarReloader.RunWorkerAsync()
 
-        ToggleSpeech()
+        If My.Settings.autoListen Then sreListen = True
+
+        hsRecog.LoadGrammar(buildGrammar)
+        hsRecog.RecognizeAsync(RecognizeMode.Multiple)
     End Sub ' Run when the plugin is first initialized
 
     'Speech recognition events
     Public Sub onSpeechRecognized(sender As Object, e As SpeechRecognizedEventArgs) Handles hsRecog.SpeechRecognized
+
+
+        actionInProgress = True
+
+        If Not sreListen Then
+            actionInProgress = False
+            Exit Sub
+        End If
+
         'If hearthstone is inactive, exit
         If Not checkActiveWindow() Then
             writeLog("Heard command """ & e.Result.Text & """ but Hearthstone was inactive")
@@ -181,15 +195,6 @@ Public Class hsVoicePlugin
 
         updateStatusText("Heard """ & e.Result.Text & """")
         writeLog("Command recognized """ & e.Result.Text & """ - executing action")
-
-        Do While actionInProgress
-            'Loop if another command is executing or we get BUGS
-            Sleep(1)
-        Loop
-
-        actionInProgress = True
-        Dim sreReset = sreListen
-        If sreReset Then ToggleSpeech()
 
         'start command processing
 
@@ -261,7 +266,6 @@ Public Class hsVoicePlugin
 
         lastCommand = e.Result.Text 'set last command executed
         hsRecog.RequestRecognizerUpdate() 'request grammar update
-        If sreReset Then ToggleSpeech()
         actionInProgress = False 'end command processing
 
     End Sub ' Handles processing recognized speech input
@@ -300,9 +304,9 @@ Public Class hsVoicePlugin
     End Sub
     Public Sub onResetTimer() Handles timerReset.Tick
         If sreListen = True Then
-            updateStatusText("Listening... (F12 to stop)")
+            updateStatusText("Listening...")
         Else
-            updateStatusText("Stopped (Press F12)")
+            updateStatusText("Stopped")
         End If
 
         timerReset.Enabled = False
@@ -524,7 +528,6 @@ Public Class hsVoicePlugin
     End Sub 'handle hero powers
     Private Sub doAttack(e As SpeechRecognizedEventArgs)
         If e.Result.Semantics.ContainsKey("opposing") Then ' Target is a minion
-
             Dim myMinion = e.Result.Semantics("friendly").Value
             Dim targetMinion = e.Result.Semantics("opposing").Value
             moveCursorToEntity(myMinion, True)
@@ -800,7 +803,9 @@ Public Class hsVoicePlugin
                                             End If
                                             hdtStatus.Text = newStatus
                                             timerReset.Enabled = True
+
                                         End Sub)
+            overlayCanvas.UpdateLayout 
         Catch ex As Exception
             Return
         End Try
@@ -1250,36 +1255,36 @@ Public Class hsVoicePlugin
     Public Sub hotkeyWorker_DoWork() Handles hotkeyWorker.DoWork
 
         Do
+            Dim toggleHotkey = Keys.F12
+            Dim pttHotkey = Keys.LShiftKey
 
-            Dim hotkeyState As Short = GetAsyncKeyState(Keys.F12)
-            If hotkeyState = 1 Or hotkeyState = Int16.MinValue Then
-                ToggleSpeech()
-                Sleep(500)
+            If My.Settings.toggleOrPTT Then ' Push-to-talk
+                Dim hotkeyState As Short = GetAsyncKeyState(pttHotkey)
+                If hotkeyState <> 0 Then
+                    sreListen = True
+                    updateStatusText("Listening...")
+                    Do While hotkeyState <> 0
+                        Sleep(1)
+                        hotkeyState = GetAsyncKeyState(pttHotkey)
+                    Loop
+                    updateStatusText("Processing...")
+                    Do While hsRecog.AudioState = AudioState.Speech
+                        Sleep(1)
+                    Loop
+                    Sleep(500)
+                    sreListen = False
+                End If
+            Else ' Toggle
+                Dim hotkeyState As Short = GetAsyncKeyState(toggleHotkey)
+                If hotkeyState <> 0 Then
+                    sreListen = Not sreListen
+                    updateStatusText(Nothing)
+                    Sleep(200)
+                End If
             End If
-            Sleep(10)
+
+            Sleep(50)
         Loop
 
-    End Sub
-    Public Sub ToggleSpeech()
-        If sreListen Then
-
-            sreListen = False
-            hsRecog.RecognizeAsyncCancel()
-            If Not actionInProgress Then _
-                updateStatusText("Stopped")
-        Else
-            sreListen = True
-            If hsRecog.Grammars.Count = 0 Then
-                hsRecog.LoadGrammar(buildGrammar)
-            End If
-            Try
-                hsRecog.RecognizeAsync(RecognizeMode.Multiple)
-                If Not actionInProgress Then _
-                    updateStatusText("Started")
-            Catch ex As Exception
-
-            End Try
-
-        End If
     End Sub
 End Class

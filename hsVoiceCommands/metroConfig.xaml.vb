@@ -31,6 +31,14 @@ Partial Class MetroConfig
         slideThreshold.Value = My.Settings.Threshold
         checkQuickPlay.IsChecked = My.Settings.quickPlay
 
+        Select Case My.Settings.toggleOrPTT
+            Case True
+                radioPTT.IsChecked = True
+
+            Case False
+                radioToggle.IsChecked = True
+        End Select
+
     End Sub
 
     Private Sub Button_Click(sender As Object, e As System.Windows.RoutedEventArgs)
@@ -43,6 +51,9 @@ Partial Class MetroConfig
 
         My.Settings.Threshold = slideThreshold.Value
         My.Settings.quickPlay = checkQuickPlay.IsChecked
+
+        My.Settings.toggleOrPTT = radioPTT.IsChecked
+        My.Settings.Save()
         Me.Close()
     End Sub
 
