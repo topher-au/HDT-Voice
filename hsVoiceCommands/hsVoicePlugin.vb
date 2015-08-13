@@ -19,7 +19,7 @@ Public Class hsVoicePlugin
     Public Declare Function GetForegroundWindow Lib "user32" () As System.IntPtr
     Public Declare Auto Function GetWindowText Lib "user32" (ByVal hWnd As System.IntPtr, ByVal lpString As System.Text.StringBuilder, ByVal cch As Integer) As Integer
     Public Declare Sub mouse_event Lib "user32" (ByVal dwFlags As Integer, ByVal dx As Integer, ByVal dy As Integer, ByVal cButtons As Integer, ByVal dwExtraInfo As IntPtr)
-    Declare Function GetAsyncKeyState Lib "user32" (ByVal vkey As Integer) As Short
+    Public Declare Function GetAsyncKeyState Lib "user32" (ByVal vkey As Integer) As Short
 
     Const MOUSE_LEFTDOWN As UInteger = &H2
     Const MOUSE_LEFTUP As UInteger = &H4
@@ -31,16 +31,15 @@ Public Class hsVoicePlugin
         Public Right As Integer
         Public Bottom As Integer
     End Structure
+
     ' Speech recognition objects
     Public WithEvents hsRecog As SpeechRecognitionEngine
+    Public lastCommand As New String("none")
+    Public WithEvents timerReset As New Timer
+
     Public WithEvents hotkeyWorker As New BackgroundWorker
 
     Public voiceLog As IO.StreamWriter
-    Public lastCommand As New String("none")
-
-    Public WithEvents timerReset As New Timer
-
-    Public WithEvents grammarReloader As New BackgroundWorker
 
     'Overlay elements
     Public overlayCanvas As Canvas = Overlay.OverlayCanvas 'the main overlay object
@@ -111,7 +110,7 @@ Public Class hsVoicePlugin
             writeLog("Successfuly started speech recognition")
         Catch ex As Exception
             writeLog("Error initializing speech recognition: " & ex.Message)
-            MsgBox("An error occurred initializing speech recognition: " & vbNewLine & ex.Message, vbOKOnly + vbCritical, "HDT-Voice")
+            MsgBox("An error occurred initializing speech recognition: " & vbNewLine & ex.Message & vbNewLine & vbNewLine & "HDT-Voice will not function.", vbOKOnly + vbCritical, "HDT-Voice")
         End Try
 
 
@@ -158,7 +157,6 @@ Public Class hsVoicePlugin
         timerReset.Enabled = True
 
         hotkeyWorker.RunWorkerAsync() 'Start listening for hotkey
-        grammarReloader.RunWorkerAsync()
 
         ToggleSpeech()
     End Sub ' Run when the plugin is first initialized
