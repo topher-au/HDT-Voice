@@ -10,4 +10,4 @@ The requirements for HDT-Voice are as follows:
 
 # Installation and Usage
 
-Please see the [HDT-Voice Wiki](https://github.com/topher-au/HDT-Voice/wiki/Installation) for full installation instructions and a detailed guide to the voice commands available.
+Please see the [HDT-Voice Wiki](https://github.com/topher-au/HDT-Voice/wiki) for full installation instructions and a detailed guide to the voice commands available.
