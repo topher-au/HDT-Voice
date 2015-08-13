@@ -201,7 +201,7 @@ Public Class hsVoicePlugin
         If Debugger.IsAttached Then 'debug only commands
             If e.Result.Text = "debug show cards" Then
                 For i = 1 To handCards.Count
-                    moveCursorToEntity(handCards.Item(i - 1).Id, 50)
+                    moveCursorToEntity(handCards.Item(i - 1).Id)
                     Sleep(500)
                 Next
             End If
@@ -512,13 +512,13 @@ Public Class hsVoicePlugin
             Dim friendlyID = e.Result.Semantics("friendly").Value
             moveCursor(62, 76, 50)
             startDrag()
-            moveCursorToEntity(friendlyID, True)
+            moveCursorToEntity(friendlyID)
             endDrag()
         ElseIf e.Result.Semantics.ContainsKey("opposing") Then
             Dim opposingID = e.Result.Semantics("opposing").Value
             moveCursor(62, 76, 50)
             startDrag()
-            moveCursorToEntity(opposingID, True)
+            moveCursorToEntity(opposingID)
             endDrag()
         Else
             moveCursor(62, 76, 50)
@@ -527,16 +527,17 @@ Public Class hsVoicePlugin
         Sleep(100)
     End Sub 'handle hero powers
     Private Sub doAttack(e As SpeechRecognizedEventArgs)
+
         If e.Result.Semantics.ContainsKey("opposing") Then ' Target is a minion
             Dim myMinion = e.Result.Semantics("friendly").Value
             Dim targetMinion = e.Result.Semantics("opposing").Value
-            moveCursorToEntity(myMinion, True)
+            moveCursorToEntity(myMinion)
             startDrag()
-            moveCursorToEntity(targetMinion, 50)
+            moveCursorToEntity(targetMinion)
             endDrag()
         Else ' Not a minion, attack face
             Dim myMinion = e.Result.Semantics("friendly").Value
-            moveCursorToEntity(myMinion, 50)
+            moveCursorToEntity(myMinion)
             startDrag()
             moveCursor(50, 20, 50)
             endDrag()
@@ -544,6 +545,8 @@ Public Class hsVoicePlugin
         Sleep(100)
     End Sub 'handle attacking
     Private Sub doPlay(e As SpeechRecognizedEventArgs)
+        If handCards.Count = 0 Then Exit Sub
+
         Dim myCard = e.Result.Semantics("card").Value
         Dim cardType = handCards.First(Function(x) x.Id = myCard).Card.Type
 
@@ -561,12 +564,12 @@ Public Class hsVoicePlugin
             dragTargetToTarget(myCard, targetName)
         Else 'Play card with no target
             If cardType = "Minion" Then
-                moveCursorToEntity(myCard, 50)
+                moveCursorToEntity(myCard)
                 startDrag()
                 moveCursor(85, 55, 50) 'play to right of board
                 endDrag()
             Else
-                moveCursorToEntity(myCard, 50)
+                moveCursorToEntity(myCard)
                 startDrag()
                 moveCursor(40, 75, 50) 'play to board
                 endDrag()
@@ -600,15 +603,15 @@ Public Class hsVoicePlugin
         End If
         If e.Result.Semantics.ContainsKey("card") Then 'target card
             Dim targetName = e.Result.Semantics("card").Value
-            moveCursorToEntity(targetName, 50)
+            moveCursorToEntity(targetName)
         End If
         If e.Result.Semantics.ContainsKey("friendly") Then 'target friendly
             Dim targetName = e.Result.Semantics("friendly").Value
-            moveCursorToEntity(targetName, 50)
+            moveCursorToEntity(targetName)
         End If
         If e.Result.Semantics.ContainsKey("opposing") Then 'target opposing
             Dim targetName = e.Result.Semantics("opposing").Value
-            moveCursorToEntity(targetName, 50)
+            moveCursorToEntity(targetName)
         End If
     End Sub 'handle targeting cursor
 
@@ -636,7 +639,7 @@ Public Class hsVoicePlugin
     Public Sub dragTargetToTarget(startEntity As Integer, endEntity As String)
         moveCursorToEntity(startEntity)
         startDrag()
-        moveCursorToEntity(endEntity, True)
+        moveCursorToEntity(endEntity)
         endDrag()
     End Sub
     Public Sub moveCursorToOption(optionNum As Integer, totalOptions As Integer)
@@ -1273,6 +1276,7 @@ Public Class hsVoicePlugin
                     Loop
                     Sleep(500)
                     sreListen = False
+                    updateStatusText(Nothing)
                 End If
             Else ' Toggle
                 Dim hotkeyState As Short = GetAsyncKeyState(toggleHotkey)
