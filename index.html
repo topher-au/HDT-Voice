@@ -38,170 +38,26 @@
           <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
         </div>
 
-        <h2>
-<a id="what-is-hdt-voice" class="anchor" href="#what-is-hdt-voice" aria-hidden="true"><span class="octicon octicon-link"></span></a>What is HDT-Voice?</h2>
+        <h1>
+<a id="what-is-hdt-voice" class="anchor" href="#what-is-hdt-voice" aria-hidden="true"><span class="octicon octicon-link"></span></a>What is HDT-Voice?</h1>
 
 <p>HDT-Voice is a plugin for Hearthstone Deck Tracker that allows you to play the game and navigate the menus using simple voice commands.</p>
 
-<h2>
-<a id="whats-new-in-this-version" class="anchor" href="#whats-new-in-this-version" aria-hidden="true"><span class="octicon octicon-link"></span></a>What's new in this version</h2>
+<h1>
+<a id="requirements-and-download" class="anchor" href="#requirements-and-download" aria-hidden="true"><span class="octicon octicon-link"></span></a>Requirements and Download</h1>
 
-<p><b>Features</b></p>
-
-<ul>
-<li>Added a status indicator. Red means the plugin is busy, green means you can speak. (Disable in settings)</li>
-<li>Added "quick play" setting (see below), which shortens the grammar used for playing cards (Disable in settings)</li>
-<li>Added option to hide or change the location of the text indicator</li>
-</ul>
-
-<p><b>Bug fixes and miscellaneous</b></p>
+<p>The requirements for HDT-Voice are as follows:</p>
 
 <ul>
-<li>When multiple of one card are in a zone, not specifying a number defaults to the leftmost</li>
-<li>Minor grammar changes and updates</li>
-<li>The plugin should now pick up the correct card when playing a card</li>
-<li>Playing a spell to a friendly minion now no longer targets the wrong minion</li>
-<li>The plugin should now more frequently update the data it uses for getting target positions</li>
+<li><a href="https://github.com/topher-au/HDT-Voice/releases">HDT-Voice plugin (download here)</a></li>
+<li><a href="https://github.com/Epix37/Hearthstone-Deck-Tracker">Hearthstone Deck Tracker</a></li>
+<li><a href="https://www.google.com/?q=install+microsoft+speech+recognition">Microsoft Speech Recognition engine</a></li>
 </ul>
 
-<h2>
-<a id="sounds-good-how-do-i-get-it" class="anchor" href="#sounds-good-how-do-i-get-it" aria-hidden="true"><span class="octicon octicon-link"></span></a>Sounds good, how do I get it?</h2>
+<h1>
+<a id="installation-and-usage" class="anchor" href="#installation-and-usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation and Usage</h1>
 
-<p>The latest version of HDT-Voice will always be available here:
-<a href="https://github.com/topher-au/HDT-Voice/releases">https://github.com/topher-au/HDT-Voice/releases</a></p>
-
-<p>Since HDT-Voice is a plugin for Hearthstone Deck Tracker, you'll also need to download and configure it before you are able to use HDT-Voice.</p>
-
-<p>Hearthstone Deck Tracker is available from:
-<a href="https://github.com/Epix37/Hearthstone-Deck-Tracker/releases">https://github.com/Epix37/Hearthstone-Deck-Tracker/releases</a></p>
-
-<h2>
-<a id="ok-i-got-the-download-now-what" class="anchor" href="#ok-i-got-the-download-now-what" aria-hidden="true"><span class="octicon octicon-link"></span></a>OK, I got the download, now what?</h2>
-
-<p>To install, simply copy HDT-Voice.dll into your Hearthstone Deck Tracker plugins folder, then right click and select Properties and check "Unblock" at the bottom of the panel.</p>
-
-<p>Once you have installed the DLL file, open Hearthstone Deck Tracker and go to the Options menu. Select Plugins, then select HDT-Voice and click "Enable".</p>
-
-<p>Click the "Configure" button to select the audio device that HDT-Voice will use to receive voice commands (NYI: default audio device only), as well as adjust the threshold for voice recognition.</p>
-
-<p>Once you've completed the above steps, next time you load Hearthstone you should see "HDT-Voice: Listening..." in the upper left hand corner of the window. That means that everything has worked and you should now be able to use voice commands in Hearthstone!</p>
-
-<h2>
-<a id="ive-done-all-that-now-how-do-i-attack-face" class="anchor" href="#ive-done-all-that-now-how-do-i-attack-face" aria-hidden="true"><span class="octicon octicon-link"></span></a>I've done all that, now how do I attack face?!</h2>
-
-<p>Good thing you asked! The first thing you need to know is that the plugin operates in two different modes: <i>menu mode</i> and <i>game mode</i>.</p>
-
-<h3>
-<a id="menu-mode" class="anchor" href="#menu-mode" aria-hidden="true"><span class="octicon octicon-link"></span></a>Menu Mode</h3>
-
-<p>From the main menu you will probably want to say...</p>
-
-<ul>
-<li><b>"Play"</b></li>
-<li>
-<b>"Solo"</b> (NYI)</li>
-<li>
-<b>"Arena"</b> (NYI)</li>
-<li>
-<b>"Brawl"</b> (no deck editor)</li>
-</ul>
-
-<p>If you're at the Play menu/deck selection screen, you might want to say...</p>
-
-<ul>
-<li>
-<b>"Basic"</b>, "Custom" or"Deck 1-9" to select deck</li>
-<li>
-<b>"Casual"</b> or "Ranked" for game type</li>
-<li>
-<b>"Start Game"</b> to start the game</li>
-<li>
-<b>"Cancel"</b> to cancel the opponent finder</li>
-<li>
-<b>"Back"</b> to go back</li>
-</ul>
-
-<p>Or maybe the plugin thought you said "brawl", in which case say...</p>
-
-<ul>
-<li>
-<b>"Start Brawl"</b> to start brawl</li>
-<li>
-<b>"Cancel"</b> to cancel the opponent finder</li>
-<li>
-<b>"Back"</b> to go back</li>
-</ul>
-
-<h3>
-<a id="game-mode" class="anchor" href="#game-mode" aria-hidden="true"><span class="octicon octicon-link"></span></a>Game Mode</h3>
-
-<p>When referring to a card or minion, you may refer to it by it's name or by it's number.</p>
-
-<ul>
-<li>
-<i>&lt;card&gt;</i> - a card name or number ("card 1", "card 2", "Sludge Belcher", "Armorsmith 2")</li>
-<li>
-<i>&lt;friendly&gt;</i> - a friendly minion ("minion 3", "Sludge Belcher 2")</li>
-<li>
-<i>&lt;enemy&gt;</i> - an enemy minion</li>
-<li>
-<i>&lt;target&gt;</i> - a target, specify which side ("friendly minion 4", "enemy hero")</li>
-</ul>
-
-<p>The first thing you do when you start a game of Hearthstone is mulligan a card (or all of them). To do so, say one of the following:</p>
-
-<ul>
-<li>
-<b>"click &lt;card&gt;"</b> ("click 2", "click Dr. Boom")</li>
-<li><b>"click confirm"</b></li>
-</ul>
-
-<p>Once the game has started, you can perform a variety of commands as listed below.</p>
-
-<ul>
-<li>
-<b>"target &lt;target&gt;"</b> ("target friendly face", "target my minion 1", "target enemy hero")</li>
-<li>
-<b>"click &lt;target&gt;"</b> ("click my hero", "click enemy face", "target enemy hero")</li>
-<li><p>"click" - send a click to the current cursor position</p></li>
-<li><p><b>"play &lt;card&gt;"</b> - play a card to the board</p></li>
-<li>
-<b>"play &lt;card&gt; on &lt;friendly&gt;"</b> - play a minion to the left of the friendly minion specified</li>
-<li>
-<b>"play &lt;card&gt; to &lt;target&gt;"</b> - play a card onto the specified target</li>
-<li><p><b>Quick Play:</b> You don't need to say "play card to target", just "card to target"</p></li>
-<li><p><b>"use hero power"</b> - use hero power</p></li>
-<li>
-<b>"use hero power on &lt;target&gt;"</b> - use hero power on specified minion</li>
-<li><p><b>Quick Play:</b> Just say "hero power" or "hero power on target"</p></li>
-<li><p><b>"attack &lt;enemy&gt; with &lt;friendly&gt;"</b> ("Attack Sylvanas Windrunner with Dr. Boom")</p></li>
-<li><p><b>"&lt;friendly&gt; go &lt;enemy&gt;"</b> ("Huffer go face")</p></li>
-<li><p><b>"say &lt;emote&gt;"</b>
-thanks/thank you, well played, greetings/hello, sorry, oops, threaten</p></li>
-<li><p><b>"choose option &lt;x&gt; of &lt;y&gt;"</b>
-when presented with options (such as certain Druid cards), x is the option you
-want to select and y is the number of total options, up to 4.
-Say "click" afterwards to confirm your selection.</p></li>
-<li><p><b>"end turn"</b> - ends your turn</p></li>
-</ul>
-
-<h3>
-<a id="synonyms" class="anchor" href="#synonyms" aria-hidden="true"><span class="octicon octicon-link"></span></a>Synonyms!</h3>
-
-<p>You can use the following synonyms:</p>
-
-<ul>
-<li>hero, face</li>
-<li>enemy, opposing, opponent</li>
-<li>my, friendly</li>
-</ul>
-
-<h2>
-<a id="troubleshooting" class="anchor" href="#troubleshooting" aria-hidden="true"><span class="octicon octicon-link"></span></a>Troubleshooting</h2>
-
-<p>Please check that your default audio device is set to the microphone used for speech recognition and restart Hearthstone Deck Tracker. You may also want to adjust the threshold level in the settings window (available from within the HDT plugins panel)</p>
-
-<p>You can also enable the debug log and send it to me, it might help!</p>
+<p>Please see the <a href="https://github.com/topher-au/HDT-Voice/wiki">HDT-Voice Wiki</a> for full installation instructions and a detailed guide to the voice commands available.</p>
       </section>
 
     </div>
