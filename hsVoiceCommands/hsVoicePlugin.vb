@@ -59,7 +59,7 @@ Public Class hsVoicePlugin
             ' Clone entities from game and return as array
             Return Helper.DeepClone(Game.Entities).Values.ToArray
         End Get
-    End Property
+    End Property ' The list of entities for the current game
     Private ReadOnly Property PlayerEntity As Entity
         Get
             ' Return the Entity representing the player
@@ -69,7 +69,7 @@ Public Class hsVoicePlugin
                 Return Nothing
             End Try
         End Get
-    End Property
+    End Property ' The player's entity
     Private ReadOnly Property OpponentEntity As Entity
         Get
             ' Return the Entity representing the player
@@ -79,7 +79,7 @@ Public Class hsVoicePlugin
                 Return Nothing
             End Try
         End Get
-    End Property
+    End Property ' The opponent entity
 
     'Main functions
     Public Sub Load()
@@ -161,7 +161,7 @@ Public Class hsVoicePlugin
         grammarReloader.RunWorkerAsync()
 
         ToggleSpeech()
-    End Sub
+    End Sub ' Run when the plugin is first initialized
 
     'Speech recognition events
     Public Sub onSpeechRecognized(sender As Object, e As SpeechRecognizedEventArgs) Handles hsRecog.SpeechRecognized
@@ -182,6 +182,7 @@ Public Class hsVoicePlugin
         writeLog("Command recognized """ & e.Result.Text & """ - executing action")
         Do While actionInProgress
             'Loop if another command is executing or we get BUGS
+            Sleep(1)
         Loop
 
         actionInProgress = True
@@ -260,22 +261,22 @@ Public Class hsVoicePlugin
         hsRecog.RequestRecognizerUpdate() 'request grammar update
         actionInProgress = False 'end command processing
         If sreReset Then ToggleSpeech()
-    End Sub
+    End Sub ' Handles processing recognized speech input
     Public Sub onUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles hsRecog.RecognizerUpdateReached
         Do While actionInProgress
-
+            Sleep(1)
         Loop
 
         rebuildCardData()
         hsRecog.UnloadAllGrammars()
         hsRecog.LoadGrammar(buildGrammar)
-    End Sub
+    End Sub ' Handles updating the grammar between commands
     Public Sub requestRecogUpdate(Optional e = Nothing)
         Do While actionInProgress
-
+            Sleep(1)
         Loop
         hsRecog.RequestRecognizerUpdate()
-    End Sub
+    End Sub ' Request the SpeechRecognitionEngine update asynchronously
 
     'Event handlers
     Public Sub onNewGame()
@@ -290,7 +291,7 @@ Public Class hsVoicePlugin
         If Not IsNothing(OpponentEntity) Then _
                 opponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
 
-    End Sub
+    End Sub ' Runs when a new game is started
     Public Sub onMulligan(Optional c As Card = Nothing)
         mulliganDone = True
     End Sub
@@ -302,7 +303,7 @@ Public Class hsVoicePlugin
         End If
 
         timerReset.Enabled = False
-    End Sub
+    End Sub ' Resets the 
 
     'Voice command handlers
     Private Sub doChoose(e As SpeechRecognizedEventArgs)
@@ -798,7 +799,9 @@ Public Class hsVoicePlugin
             menuChoices.Add(New SemanticResultKey("menu", "arena"))
             menuChoices.Add(New SemanticResultKey("menu", "start arena"))
             menuChoices.Add(New SemanticResultKey("menu", "buy arena with gold"))
-            menuChoices.Add(New Choices(New SemanticResultKey("menu", "cancel arena"), New SemanticResultKey("menu", New SemanticResultValue("OK", "cancel arena")), New SemanticResultKey("menu", New SemanticResultValue("choose", "cancel arena"))))
+            menuChoices.Add(New Choices(New SemanticResultKey("menu", "cancel arena"),
+                                        New SemanticResultKey("menu", New SemanticResultValue("OK", "cancel arena")),
+                                        New SemanticResultKey("menu", New SemanticResultValue("choose", "cancel arena"))))
             menuChoices.Add(New SemanticResultKey("menu", "hero 1"))
             menuChoices.Add(New SemanticResultKey("menu", "hero 2"))
             menuChoices.Add(New SemanticResultKey("menu", "hero 3"))
@@ -807,7 +810,8 @@ Public Class hsVoicePlugin
             menuChoices.Add(New SemanticResultKey("menu", "card 3"))
             menuChoices.Add(New SemanticResultKey("menu", "confirm"))
 
-            menuChoices.Add(New Choices(New SemanticResultKey("menu", "brawl"), New SemanticResultKey("menu", New SemanticResultValue("tavern brawl", "brawl"))))
+            menuChoices.Add(New Choices(New SemanticResultKey("menu", "brawl"),
+                                        New SemanticResultKey("menu", New SemanticResultValue("tavern brawl", "brawl"))))
             menuChoices.Add(New SemanticResultKey("menu", "start brawl"))
 
             menuChoices.Add(New SemanticResultKey("menu", "open packs"))
@@ -1225,7 +1229,7 @@ Public Class hsVoicePlugin
                 ToggleSpeech()
                 Sleep(500)
             End If
-
+            Sleep(10)
         Loop
 
     End Sub
