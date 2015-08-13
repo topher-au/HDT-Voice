@@ -193,20 +193,20 @@ Public Class hsVoicePlugin
             If e.Result.Text = "debug show cards" Then
                 For i = 1 To handCards.Count
                     moveCursorToEntity(handCards.Item(i - 1).Id)
-                    Sleep(500)
+                    Sleep(250)
                 Next
             End If
             If e.Result.Text = "debug show friendlies" Then
                 For i = 1 To boardFriendly.Count
                     moveCursorToEntity(boardFriendly.Item(i - 1).Id)
-                    Sleep(500)
+                    Sleep(250)
                 Next
                 moveCursorToEntity(PlayerEntity.Id)
             End If
             If e.Result.Text = "debug show enemies" Then
                 For i = 1 To boardOpposing.Count
                     moveCursorToEntity(boardOpposing.Item(i - 1).Id)
-                    Sleep(500)
+                    Sleep(250)
                 Next
                 moveCursorToEntity(OpponentEntity.Id)
             End If
@@ -628,7 +628,7 @@ Public Class hsVoicePlugin
     Public Sub dragTargetToTarget(startEntity As Integer, endEntity As String)
         moveCursorToEntity(startEntity)
         startDrag()
-        moveCursorToEntity(endEntity)
+        moveCursorToEntity(endEntity, True)
         endDrag()
     End Sub
     Public Sub moveCursorToOption(optionNum As Integer, totalOptions As Integer)
@@ -638,7 +638,7 @@ Public Class hsVoicePlugin
         Dim optionStart As Integer = 50 - (optionsWidth / 2)
         moveCursor(optionStart + myOption, 50)
     End Sub
-    Public Sub moveCursor(xPercent As Integer, yPercent As Integer)
+    Public Sub moveCursor(xPercent As Integer, yPercent As Integer, Optional smooth As Boolean = False)
         'First, find the Hearthstone window and it's size
         Dim hWndHS As IntPtr = FindWindow(Nothing, "Hearthstone")
         Dim rectHS As RECT
@@ -653,11 +653,39 @@ Public Class hsVoicePlugin
         Dim cursorX As Integer = (xPercent / 100) * uiWidth + xOffset + rectHS.Left
         Dim cursorY As Integer = (yPercent / 100) * uiHeight + rectHS.Top + 8
 
-        Cursor.Position = New Point(cursorX, cursorY)
+        If My.Settings.smoothCursor And smooth Then
+            Dim x0 As Double = Cursor.Position.X
+            Dim y0 As Double = Cursor.Position.Y
+            Dim dx As Double = Math.Abs(cursorX - x0)
+            Dim dy As Double = Math.Abs(cursorY - y0)
+
+            Dim sx, sy, err, e2 As Double
+
+            If x0 < cursorX Then sx = 1 Else sx = -1
+            If y0 < cursorY Then sy = 1 Else sy = -1
+            err = dx - dy
+
+            For i = 1 To cursorX
+                e2 = 2 * err
+                If e2 > -dy Then
+                    err -= dy
+                    x0 += sx
+                End If
+                If e2 < dx Then
+                    err += dx
+                    y0 += sx
+                End If
+                Cursor.Position = New Point(x0, y0)
+                Sleep(10)
+            Next
+        Else ' jump straight to end point
+            Cursor.Position = New Point(cursorX, cursorY)
+        End If
+
         Sleep(100)
     End Sub
 
-    Public Function moveCursorToEntity(EntityID As Integer)
+    Public Function moveCursorToEntity(EntityID As Integer, Optional smooth As Boolean = False)
         Dim targetEntity As Entity
 
         Try 'Try and find the entity in the game
@@ -674,7 +702,7 @@ Public Class hsVoicePlugin
 
             Dim x = (((cardNum) / (totalCards)) * handwidth) - (handwidth / 2) - 0.8
             Dim y = (x * -0.16) ^ 2
-            moveCursor(x + 44, y + 89)
+            moveCursor(x + 44, y + 89, smooth)
             Return True
         End If
 
@@ -686,31 +714,31 @@ Public Class hsVoicePlugin
             Dim minionX = minionNum * 9
 
             Dim minX = 50 - (totalWidth / 2) + minionX - 6
-            moveCursor(minX, 55)
+            moveCursor(minX, 55, smooth)
             Return True
         End If
 
         'Then, check whether it is an opposing minion
         If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GAME_TAG.CONTROLLER) = opponentID Then
             Dim minionNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
-            Dim totalMinions As Integer = boardopposing.Count
+            Dim totalMinions As Integer = boardOpposing.Count
             Dim totalWidth = totalMinions * 9
             Dim minionX = minionNum * 9
 
             Dim minX = 50 - (totalWidth / 2) + minionX - 5
-            moveCursor(minX, 40)
+            moveCursor(minX, 40, smooth)
             Return True
 
         End If
 
         'Finally, check whether it is a hero
         If targetEntity.IsPlayer Then
-            moveCursor(50, 75)
+            moveCursor(50, 75, smooth)
             Return True
         End If
 
         If targetEntity.IsOpponent Then
-            moveCursor(50, 20)
+            moveCursor(50, 20, smooth)
             Return True
         End If
 

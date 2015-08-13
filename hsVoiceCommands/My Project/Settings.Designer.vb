@@ -104,18 +104,6 @@ Namespace My
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-         Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
-        Public Property showStatusLight() As Boolean
-            Get
-                Return CType(Me("showStatusLight"),Boolean)
-            End Get
-            Set
-                Me("showStatusLight") = value
-            End Set
-        End Property
-        
-        <Global.System.Configuration.UserScopedSettingAttribute(),  _
-         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("0")>  _
         Public Property statusTextPos() As Integer
             Get
@@ -135,6 +123,18 @@ Namespace My
             End Get
             Set
                 Me("quickPlay") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
+        Public Property smoothCursor() As Boolean
+            Get
+                Return CType(Me("smoothCursor"),Boolean)
+            End Get
+            Set
+                Me("smoothCursor") = value
             End Set
         End Property
     End Class
