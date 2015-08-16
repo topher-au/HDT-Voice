@@ -35,12 +35,14 @@ Public Class hsVoicePlugin
     Public WithEvents hsRecog As SpeechRecognitionEngine
     Public WithEvents hotkeyWorker As New BackgroundWorker
 
+    ' Action processor list and worker
+    Public actionList As New List(Of SpeechRecognizedEventArgs)
+    Public WithEvents actionWorker As New BackgroundWorker
+
     Public voiceLog As IO.StreamWriter
     Public lastCommand As New String("none")
 
     Public WithEvents timerReset As New Timer
-
-    Public WithEvents grammarReloader As New BackgroundWorker
 
     'Overlay elements
     Public overlayCanvas As Canvas = Overlay.OverlayCanvas 'the main overlay object
@@ -156,29 +158,21 @@ Public Class hsVoicePlugin
 
         actionInProgress = False
 
-        timerReset.Interval = 2000
+        timerReset.Interval = 3500
         timerReset.Enabled = True
 
         hotkeyWorker.RunWorkerAsync() 'Start listening for hotkey
-        grammarReloader.RunWorkerAsync()
 
-        If My.Settings.autoListen Then sreListen = True
+        If My.Settings.autoListen And Not My.Settings.toggleOrPTT Then sreListen = True
 
         hsRecog.LoadGrammar(buildGrammar)
         hsRecog.RecognizeAsync(RecognizeMode.Multiple)
+
+        actionWorker.RunWorkerAsync()
     End Sub ' Run when the plugin is first initialized
 
     'Speech recognition events
     Public Sub onSpeechRecognized(sender As Object, e As SpeechRecognizedEventArgs) Handles hsRecog.SpeechRecognized
-
-
-        actionInProgress = True
-
-        If Not sreListen Then
-            actionInProgress = False
-            Exit Sub
-        End If
-
         'If hearthstone is inactive, exit
         If Not checkActiveWindow() Then
             writeLog("Heard command """ & e.Result.Text & """ but Hearthstone was inactive")
@@ -193,8 +187,44 @@ Public Class hsVoicePlugin
             Return
         End If
 
-        updateStatusText("Heard """ & e.Result.Text & """")
-        writeLog("Command recognized """ & e.Result.Text & """ - executing action")
+        If sreListen Then
+            updateStatusText("Heard """ & e.Result.Text & """")
+
+            ' Speech was recognized, play audio
+            If My.Settings.playAudio Then _
+                My.Computer.Audio.Play(My.Resources.sound, AudioPlayMode.Background)
+
+            ' Add command to action list for processing
+            actionList.Add(e)
+        End If
+
+    End Sub ' Handles processing recognized speech input
+    Public Sub onUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles hsRecog.RecognizerUpdateReached
+        Do While actionInProgress
+            Sleep(1)
+        Loop
+
+        rebuildCardData()
+        hsRecog.UnloadAllGrammars()
+        hsRecog.LoadGrammar(buildGrammar)
+    End Sub ' Handles updating the grammar between commands
+    Public Sub requestRecogUpdate(Optional e = Nothing)
+        hsRecog.RequestRecognizerUpdate()
+    End Sub ' Request the SpeechRecognitionEngine update asynchronously
+
+    'Action processor
+    Public Sub actionWorker_DoWork() Handles actionWorker.DoWork
+        Do
+            If actionList.Count > 0 Then
+                ProcessAction(actionList.Item(0))
+                actionList.Remove(actionList.Item(0))
+            End If
+            Sleep(10)
+        Loop
+    End Sub ' A background loop that continuously processes the actions in the action list
+    Public Sub ProcessAction(e As SpeechRecognizedEventArgs)
+        actionInProgress = True
+        writeLog("Processing command """ & e.Result.Text & """ from action list")
 
         'start command processing
 
@@ -266,24 +296,9 @@ Public Class hsVoicePlugin
 
         lastCommand = e.Result.Text 'set last command executed
         hsRecog.RequestRecognizerUpdate() 'request grammar update
+        Sleep(1000)
         actionInProgress = False 'end command processing
-
-    End Sub ' Handles processing recognized speech input
-    Public Sub onUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles hsRecog.RecognizerUpdateReached
-        Do While actionInProgress
-            Sleep(1)
-        Loop
-
-        rebuildCardData()
-        hsRecog.UnloadAllGrammars()
-        hsRecog.LoadGrammar(buildGrammar)
-    End Sub ' Handles updating the grammar between commands
-    Public Sub requestRecogUpdate(Optional e = Nothing)
-        Do While actionInProgress
-            Sleep(1)
-        Loop
-        hsRecog.RequestRecognizerUpdate()
-    End Sub ' Request the SpeechRecognitionEngine update asynchronously
+    End Sub
 
     'Event handlers
     Public Sub onNewGame()
@@ -310,7 +325,6 @@ Public Class hsVoicePlugin
         End If
 
         timerReset.Enabled = False
-        timerReset.Interval = 2000
     End Sub ' Resets the 
 
     'Voice command handlers
@@ -676,7 +690,7 @@ Public Class hsVoicePlugin
 
             Dim distZ = Math.Sqrt(distX ^ 2 + distY ^ 2) 'a^2+b^2=c^2 - the distance the mouse will move
 
-            Dim durationMod As double = If(distZ < 500, 1, 0.5)
+            Dim durationMod As Double = If(distZ < 500, 1, 0.5)
 
             duration *= durationMod
 
@@ -811,7 +825,7 @@ Public Class hsVoicePlugin
                                             timerReset.Enabled = True
 
                                         End Sub)
-            overlayCanvas.UpdateLayout 
+            overlayCanvas.UpdateLayout()
         Catch ex As Exception
             Return
         End Try
@@ -914,7 +928,7 @@ Public Class hsVoicePlugin
                 End If
 
             Next
-            cardGrammar.Append(New SemanticResultKey("card", New Choices(handGrammarNames, handGrammarNumbers)))
+            cardGrammar.Append(New SemanticResultKey("card", New Choices(handGrammarNames, handGrammarNumbers, handGrammarCardNumbers)))
         End If
 
         ' Build the grammar for friendly minions and hero

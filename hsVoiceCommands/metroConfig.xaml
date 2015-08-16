@@ -33,10 +33,13 @@
                         <Slider Name="slideThreshold" Width="200" Minimum="20" Maximum="95" Interval="5" ValueChanged="slideThreshold_ValueChanged"/>
                         <Label Name="labelThreshold" Content="0%" />
                     </Menu>
-                    <CheckBox Name="checkQuickPlay" Content="Enable Quick Play" Margin="4"/>
+                    <Menu>
+                        <CheckBox Name="checkQuickPlay" Content="Enable Quick Play" Margin="4"/>
+                        <CheckBox Name="checkPlayAudio" Content="Play audio when speech recognized" Margin="4" />
+                    </Menu>
                     <Menu>
                         <StackPanel>
-                            <Label Content="Recognizer Hotkey (F12)" />
+                            <Label Content="Hotkey Settings" />
                             <RadioButton Name="radioToggle" Content="Toggle (F12)" Margin="4"/>
                             <RadioButton Name="radioPTT" Content="Push-to-Talk (Left Shift)" Margin="4"/>
                         </StackPanel>

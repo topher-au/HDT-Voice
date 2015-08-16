@@ -30,6 +30,7 @@ Partial Class MetroConfig
 
         slideThreshold.Value = My.Settings.Threshold
         checkQuickPlay.IsChecked = My.Settings.quickPlay
+        checkPlayAudio.IsChecked = My.Settings.playAudio
 
         Select Case My.Settings.toggleOrPTT
             Case True
@@ -51,6 +52,7 @@ Partial Class MetroConfig
 
         My.Settings.Threshold = slideThreshold.Value
         My.Settings.quickPlay = checkQuickPlay.IsChecked
+        My.Settings.playAudio = checkPlayAudio.IsChecked
 
         My.Settings.toggleOrPTT = radioPTT.IsChecked
         My.Settings.Save()

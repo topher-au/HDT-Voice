@@ -173,6 +173,18 @@ Namespace My
                 Me("toggleOrPTT") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
+        Public Property playAudio() As Boolean
+            Get
+                Return CType(Me("playAudio"),Boolean)
+            End Get
+            Set
+                Me("playAudio") = value
+            End Set
+        End Property
     End Class
 End Namespace
 
