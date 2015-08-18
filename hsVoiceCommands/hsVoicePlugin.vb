@@ -54,7 +54,7 @@ Public Class hsVoicePlugin
     Public playerID As Integer = 0
     Public opponentID As Integer = 0
     Public mulliganDone As Boolean
-    Public actionInProgress As Boolean
+    Public updateComplete As Boolean
     'Properties
     Private ReadOnly Property Entities As Entity()
         Get
@@ -133,30 +133,28 @@ Public Class hsVoicePlugin
         GameEvents.OnPlayerMulligan.Add(New Action(Of Card)(AddressOf onMulligan))
 
         'Add handlers to reload grammar when needed
-        GameEvents.OnGameStart.Add(New Action(AddressOf requestRecogUpdate))
-        GameEvents.OnTurnStart.Add(New Action(Of ActivePlayer)(AddressOf requestRecogUpdate))
+        GameEvents.OnGameStart.Add(New Action(AddressOf updateRecognizer))
+        GameEvents.OnTurnStart.Add(New Action(Of ActivePlayer)(AddressOf updateRecognizer))
 
-        GameEvents.OnInMenu.Add(New Action(AddressOf requestRecogUpdate))
+        GameEvents.OnInMenu.Add(New Action(AddressOf updateRecognizer))
 
-        GameEvents.OnPlayerDeckDiscard.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerDraw.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerFatigue.Add(New Action(Of Integer)(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerGet.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerHandDiscard.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerHeroPower.Add(New Action(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerPlay.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerPlayToDeck.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
-        GameEvents.OnPlayerPlayToHand.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
+        GameEvents.OnPlayerDeckDiscard.Add(New Action(Of Card)(AddressOf updateRecognizer))
+        GameEvents.OnPlayerDraw.Add(New Action(Of Card)(AddressOf updateRecognizer))
+        GameEvents.OnPlayerFatigue.Add(New Action(Of Integer)(AddressOf updateRecognizer))
+        GameEvents.OnPlayerGet.Add(New Action(Of Card)(AddressOf updateRecognizer))
+        GameEvents.OnPlayerHandDiscard.Add(New Action(Of Card)(AddressOf updateRecognizer))
+        GameEvents.OnPlayerHeroPower.Add(New Action(AddressOf updateRecognizer))
+        GameEvents.OnPlayerPlay.Add(New Action(Of Card)(AddressOf updateRecognizer))
+        GameEvents.OnPlayerPlayToDeck.Add(New Action(Of Card)(AddressOf updateRecognizer))
+        GameEvents.OnPlayerPlayToHand.Add(New Action(Of Card)(AddressOf updateRecognizer))
 
-        GameEvents.OnOpponentPlay.Add(New Action(Of Card)(AddressOf requestRecogUpdate))
-        GameEvents.OnOpponentDraw.Add(New Action(AddressOf requestRecogUpdate))
-        GameEvents.OnOpponentHeroPower.Add(New Action(AddressOf requestRecogUpdate))
+        GameEvents.OnOpponentPlay.Add(New Action(Of Card)(AddressOf updateRecognizer))
+        GameEvents.OnOpponentDraw.Add(New Action(AddressOf updateRecognizer))
+        GameEvents.OnOpponentHeroPower.Add(New Action(AddressOf updateRecognizer))
 
         'Handlers for plugin settings and overlay size
         AddHandler My.Settings.PropertyChanged, AddressOf doOverlayLayout
         AddHandler Overlay.OverlayCanvas.SizeChanged, AddressOf doOverlayLayout
-
-        actionInProgress = False
 
         timerReset.Interval = 3500
         timerReset.Enabled = True
@@ -176,14 +174,12 @@ Public Class hsVoicePlugin
         'If hearthstone is inactive, exit
         If Not checkActiveWindow() Then
             writeLog("Heard command """ & e.Result.Text & """ but Hearthstone was inactive")
-            actionInProgress = False
             Return
         End If
 
         'If below preset confidence threshold then exit
         If e.Result.Confidence < My.Settings.Threshold / 100 Then
             writeLog("Heard command """ & e.Result.Text & """ but it was below the recognition threshold")
-            actionInProgress = False
             Return
         End If
 
@@ -200,32 +196,26 @@ Public Class hsVoicePlugin
 
     End Sub ' Handles processing recognized speech input
     Public Sub onUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles hsRecog.RecognizerUpdateReached
-        Do While actionInProgress
-            Sleep(1)
-        Loop
-
-        rebuildCardData()
         hsRecog.UnloadAllGrammars()
         hsRecog.LoadGrammar(buildGrammar)
     End Sub ' Handles updating the grammar between commands
-    Public Sub requestRecogUpdate(Optional e = Nothing)
+    Public Sub updateRecognizer(Optional e = Nothing)
         hsRecog.RequestRecognizerUpdate()
     End Sub ' Request the SpeechRecognitionEngine update asynchronously
 
     'Action processor
     Public Sub actionWorker_DoWork() Handles actionWorker.DoWork
         Do
+            rebuildCardData()
             If actionList.Count > 0 Then
+                writeLog("Processing action from action list: " & actionList.Item(0).Result.Text & " (remaining actions: " & actionList.Count.ToString & ")")
                 ProcessAction(actionList.Item(0))
                 actionList.Remove(actionList.Item(0))
             End If
-            Sleep(10)
+            Sleep(100)
         Loop
     End Sub ' A background loop that continuously processes the actions in the action list
     Public Sub ProcessAction(e As SpeechRecognizedEventArgs)
-        actionInProgress = True
-        writeLog("Processing command """ & e.Result.Text & """ from action list")
-
         'start command processing
 
         If Debugger.IsAttached Then 'debug only commands
@@ -295,9 +285,9 @@ Public Class hsVoicePlugin
         End If
 
         lastCommand = e.Result.Text 'set last command executed
-        hsRecog.RequestRecognizerUpdate() 'request grammar update
-        Sleep(1000)
-        actionInProgress = False 'end command processing
+        updateRecognizer()
+        Sleep(100)
+
     End Sub
 
     'Event handlers
@@ -567,7 +557,7 @@ Public Class hsVoicePlugin
         If e.Result.Semantics.ContainsKey("friendly") Then 'Play card to friendly target
             Dim destTarget = e.Result.Semantics("friendly").Value
             If cardType = "Minion" Then 'Card is a minion
-                dragTargetToTarget(myCard, destTarget, -6) 'Play to the left of friendly target
+                dragTargetToTarget(myCard, destTarget, -5) 'Play to the left of friendly target
             Else 'Card is a spell
                 dragTargetToTarget(myCard, destTarget) 'Direct drag to target
             End If
@@ -688,7 +678,7 @@ Public Class hsVoicePlugin
             Dim distX = endX - cursorX
             Dim distY = endY - cursorY
 
-            Dim distZ = Math.Sqrt(distX ^ 2 + distY ^ 2) 'a^2+b^2=c^2 - the distance the mouse will move
+            Dim distZ As Integer = Math.Sqrt(distX ^ 2 + distY ^ 2) 'a^2+b^2=c^2 - the distance the mouse will move
 
             Dim durationMod As Double = If(distZ < 500, 1, 0.5)
 
@@ -1002,7 +992,7 @@ Public Class hsVoicePlugin
         Dim finalChoices As New Choices
 
         ' Check if we're at the mulligan, if so only the mulligan grammar will be returned
-        If not Game.IsMulliganDone Then
+        If Not Game.IsMulliganDone Then
             writeLog("IsMulliganDone=False - Building mulligan grammar")
             Dim mulliganBuilder As New GrammarBuilder
             mulliganBuilder.Append(New SemanticResultKey("action", New SemanticResultValue("click", "mulligan")))
@@ -1119,7 +1109,7 @@ Public Class hsVoicePlugin
             Dim heroFriendly As New GrammarBuilder
             If Not My.Settings.quickPlay Then _
                 heroFriendly.Append("use")
-            heroFriendly.Append(New SemanticResultkey("action", heroChoice))
+            heroFriendly.Append(New SemanticResultKey("action", heroChoice))
             heroFriendly.Append(New Choices("on", "to"))
             heroFriendly.Append(friendlyNames)
             heroFriendly.Append(friendlyGrammar)
@@ -1209,7 +1199,6 @@ Public Class hsVoicePlugin
         End If
 
         writeLog("Grammar building complete")
-        actionInProgress = False
         Try
             Return New Grammar(New GrammarBuilder(finalChoices))
         Catch ex As Exception
@@ -1220,8 +1209,6 @@ Public Class hsVoicePlugin
 
     End Function 'Builds and returns grammar for the speech recognition engine
     Public Sub rebuildCardData()
-
-        writeLog("Rebuilding data")
 
         'build list of cards in hand
         handCards.Clear()
@@ -1259,8 +1246,6 @@ Public Class hsVoicePlugin
         boardOpposing.Sort(Function(e1 As Entity, e2 As Entity)
                                Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
                            End Function)
-
-        writeLog("Complete")
     End Sub 'Rebuilds data for cards in hand and on board
     Public Sub writeLog(Line As String)
         Line = "HDT-Voice: " & Line

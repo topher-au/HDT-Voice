@@ -40,7 +40,7 @@ Public Class HDTVoice
 
     Public ReadOnly Property Version As Version Implements IPlugin.Version
         Get
-            Return New Version(0, 6, 0)
+            Return New Version(0, 6, 3)
         End Get
     End Property
 
