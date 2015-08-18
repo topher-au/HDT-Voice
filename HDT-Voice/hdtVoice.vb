@@ -12,7 +12,7 @@ Imports Hearthstone_Deck_Tracker.API
 Imports Hearthstone_Deck_Tracker.Enums
 Imports Hearthstone_Deck_Tracker.Hearthstone
 Imports Hearthstone_Deck_Tracker.Hearthstone.Entities
-Public Class hsVoicePlugin
+Public Class hdtVoice
     ' Windows API Declarations
     Public Declare Function FindWindow Lib "user32" Alias "FindWindowA" (ByVal lpClassName As String, ByVal lpWindowName As String) As IntPtr
     Public Declare Function GetWindowRect Lib "user32" Alias "GetWindowRect" (ByVal hwnd As IntPtr, ByRef lpRect As RECT) As Integer
@@ -54,7 +54,7 @@ Public Class hsVoicePlugin
     Public playerID As Integer = 0
     Public opponentID As Integer = 0
     Public mulliganDone As Boolean
-    Public updateComplete As Boolean
+    Public updateInProgress As Boolean
     'Properties
     Private ReadOnly Property Entities As Entity()
         Get
@@ -196,8 +196,10 @@ Public Class hsVoicePlugin
 
     End Sub ' Handles processing recognized speech input
     Public Sub onUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles hsRecog.RecognizerUpdateReached
+        updateInProgress = True
         hsRecog.UnloadAllGrammars()
         hsRecog.LoadGrammar(buildGrammar)
+        updateInProgress = False
     End Sub ' Handles updating the grammar between commands
     Public Sub updateRecognizer(Optional e = Nothing)
         hsRecog.RequestRecognizerUpdate()
@@ -206,6 +208,9 @@ Public Class hsVoicePlugin
     'Action processor
     Public Sub actionWorker_DoWork() Handles actionWorker.DoWork
         Do
+            Do While updateInProgress
+                Sleep(1)
+            Loop
             rebuildCardData()
             If actionList.Count > 0 Then
                 writeLog("Processing action from action list: " & actionList.Item(0).Result.Text & " (remaining actions: " & actionList.Count.ToString & ")")
@@ -389,108 +394,149 @@ Public Class hsVoicePlugin
     Private Sub doMenu(e As SpeechRecognizedEventArgs)
         Select Case e.Result.Semantics("menu").Value
             Case "play"
-                moveCursor(50, 31, 50)
+                moveCursor(50, 31)
                 sendLeftClick()
-            Case "casual"
-                moveCursor(75, 20, 50)
+            Case "casual mode"
+                moveCursor(75, 20)
                 sendLeftClick()
-            Case "ranked"
-                moveCursor(85, 20, 50)
+            Case "ranked mode"
+                moveCursor(85, 20)
                 sendLeftClick()
-            Case "basic"
-                moveCursor(23, 90, 50)
+            Case "basic decks"
+                moveCursor(23, 90)
                 sendLeftClick()
-            Case "custom"
-                moveCursor(45, 90, 50)
+            Case "custom decks"
+                moveCursor(45, 90)
                 sendLeftClick()
             Case "start game"
-                moveCursor(80, 85, 50)
+                moveCursor(80, 85)
                 sendLeftClick()
 
             Case "solo"
-                moveCursor(50, 38, 50)
+                moveCursor(50, 38)
                 sendLeftClick()
+
+            Case "versus mage"
+                moveCursor(82, 12)
+                sendLeftClick()
+
+            Case "versus hunter"
+                moveCursor(82, 18)
+                sendLeftClick()
+
+            Case "versus warrior"
+                moveCursor(82, 24)
+                sendLeftClick()
+
+            Case "versus shaman"
+                moveCursor(82, 30)
+                sendLeftClick()
+
+            Case "versus druid"
+                moveCursor(82, 36)
+                sendLeftClick()
+
+            Case "versus priest"
+                moveCursor(82, 42)
+                sendLeftClick()
+
+            Case "versus rogue"
+                moveCursor(82, 48)
+                sendLeftClick()
+
+            Case "versus paladin"
+                moveCursor(82, 54)
+                sendLeftClick()
+
+            Case "versus warlock"
+                moveCursor(82, 60)
+                sendLeftClick()
+
 
             'arena commands
             Case "arena"
-                moveCursor(50, 45, 50)
+                moveCursor(50, 45)
                 sendLeftClick()
             Case "buy arena with gold"
-                moveCursor(60, 62, 50)
+                moveCursor(60, 62)
                 sendLeftClick()
             Case "cancel arena"
-                moveCursor(50, 75, 50)
+                moveCursor(50, 75)
                 sendLeftClick()
             Case "start arena"
-                moveCursor(60, 75, 50)
+                moveCursor(60, 75)
                 sendLeftClick()
             Case "hero 1"
-                moveCursor(20, 40, 50)
+                moveCursor(20, 40)
                 sendLeftClick()
             Case "hero 2"
-                moveCursor(40, 40, 50)
+                moveCursor(40, 40)
                 sendLeftClick()
             Case "hero 3"
-                moveCursor(55, 40, 50)
+                moveCursor(55, 40)
                 sendLeftClick()
             Case "card 1"
-                moveCursor(20, 40, 50)
+                moveCursor(20, 40)
                 sendLeftClick()
             Case "card 2"
-                moveCursor(40, 40, 50)
+                moveCursor(40, 40)
                 sendLeftClick()
             Case "card 3"
-                moveCursor(55, 40, 50)
+                moveCursor(55, 40)
                 sendLeftClick()
             Case "confirm"
-                moveCursor(50, 45, 50)
+                moveCursor(50, 45)
                 sendLeftClick()
 
             Case "brawl"
-                moveCursor(50, 52, 50)
+                moveCursor(50, 52)
                 sendLeftClick()
             Case "start brawl"
-                moveCursor(65, 85, 50)
+                moveCursor(65, 85)
                 sendLeftClick()
 
 
             Case "open packs"
-                moveCursor(40, 85, 50)
+                moveCursor(40, 85)
                 sendLeftClick()
             Case "open top pack"
-                moveCursor(12, 20, 50)
+                moveCursor(12, 20)
                 startDrag()
-                moveCursor(59, 49, 50)
+                moveCursor(59, 49)
                 endDrag()
             Case "open bottom pack"
-                moveCursor(12, 50, 50)
+                moveCursor(12, 50)
                 startDrag()
-                moveCursor(59, 49, 50)
+                moveCursor(59, 49)
                 endDrag()
             Case "open card 1"
-                moveCursor(60, 35, 50)
+                moveCursor(60, 35)
                 sendLeftClick()
             Case "open card 2"
-                moveCursor(80, 35, 50)
+                moveCursor(80, 35)
                 sendLeftClick()
             Case "open card 3"
-                moveCursor(70, 70, 50)
+                moveCursor(70, 70)
                 sendLeftClick()
             Case "open card 4"
-                moveCursor(50, 70, 50)
+                moveCursor(50, 70)
                 sendLeftClick()
             Case "open card 5"
-                moveCursor(40, 35, 50)
+                moveCursor(40, 35)
                 sendLeftClick()
             Case "done"
-                moveCursor(60, 50, 50)
+                moveCursor(60, 50)
+                sendLeftClick()
+
+            Case "quest log"
+                moveCursor(21, 87)
                 sendLeftClick()
 
             Case "cancel"
-                moveCursor(52, 85, 50)
+                moveCursor(52, 85)
                 sendLeftClick()
             Case "back"
-                moveCursor(92, 91, 50)
+                moveCursor(92, 91)
                 sendLeftClick()
 
             Case "deck"
@@ -507,7 +553,7 @@ Public Class hsVoicePlugin
                 Dim deckY As Integer
                 deckX = 2 + (deckCol * 16)
                 deckY = 8 + (deckRow * 20)
-                moveCursor(deckX, deckY, 50)
+                moveCursor(deckX, deckY)
                 sendLeftClick()
         End Select
     End Sub ' handle menu commands
@@ -830,13 +876,22 @@ Public Class hsVoicePlugin
 
 
             menuChoices.Add(New SemanticResultKey("menu", "play"))
-            menuChoices.Add(New SemanticResultKey("menu", "casual"))
-            menuChoices.Add(New SemanticResultKey("menu", "ranked"))
-            menuChoices.Add(New SemanticResultKey("menu", "basic"))
-            menuChoices.Add(New SemanticResultKey("menu", "custom"))
+            menuChoices.Add(New SemanticResultKey("menu", "casual mode"))
+            menuChoices.Add(New SemanticResultKey("menu", "ranked mode"))
+            menuChoices.Add(New SemanticResultKey("menu", "basic decks"))
+            menuChoices.Add(New SemanticResultKey("menu", "custom decks"))
             menuChoices.Add(New SemanticResultKey("menu", "start game"))
 
             menuChoices.Add(New SemanticResultKey("menu", "solo"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus mage"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus hunter"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus warrior"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus shaman"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus druid"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus priest"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus rogue"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus paladin"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus warlock"))
 
             menuChoices.Add(New SemanticResultKey("menu", "arena"))
             menuChoices.Add(New SemanticResultKey("menu", "start arena"))
@@ -865,6 +920,8 @@ Public Class hsVoicePlugin
             menuChoices.Add(New SemanticResultKey("menu", "open card 4"))
             menuChoices.Add(New SemanticResultKey("menu", "open card 5"))
             menuChoices.Add(New SemanticResultKey("menu", "done"))
+
+            menuChoices.Add(New SemanticResultKey("menu", "quest log"))
 
             menuChoices.Add(New SemanticResultKey("menu", "cancel"))
             menuChoices.Add(New SemanticResultKey("menu", "back"))
