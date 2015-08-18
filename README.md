@@ -4,7 +4,7 @@ HDT-Voice is a plugin for Hearthstone Deck Tracker that allows you to play the g
 ## Requirements and Download
 
 The requirements for HDT-Voice are as follows:
-- [HDT-Voice plugin (download here)](https://github.com/topher-au/HDT-Voice/releases)
+- [HDT-Voice plugin (download here)](https://github.com/topher-au/HDT-Voice/releases/latest)
 - [Hearthstone Deck Tracker](https://github.com/Epix37/Hearthstone-Deck-Tracker)
 - [Microsoft Speech Recognition engine](https://www.google.com/?q=install+microsoft+speech+recognition)
 
