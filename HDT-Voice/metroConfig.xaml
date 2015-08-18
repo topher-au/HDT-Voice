@@ -7,13 +7,13 @@
              xmlns:local="clr-namespace:HDTVoice"
              mc:Ignorable="d"
              xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro" EnableDWMDropShadow="True" Width="320" Height="350" Title="HDT-Voice Configuration" WindowStartupLocation="CenterScreen" ShowInTaskbar="False" ResizeMode="NoResize" IsMaxRestoreButtonEnabled="False" IsMinButtonEnabled="False">
-                <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition />
-                    <RowDefinition Height="40" />
-                </Grid.RowDefinitions>
-                    
-                <TabControl Margin="6">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="40" />
+        </Grid.RowDefinitions>
+
+        <TabControl Margin="6">
             <TabItem Header="app settings">
                 <Menu>
                     <CheckBox Name="checkListenAtStartup" Content="Start listening when HDT-Voice is loaded"/>
@@ -44,12 +44,14 @@
                             <RadioButton Name="radioPTT" Content="Push-to-Talk (Left Shift)" Margin="4"/>
                         </StackPanel>
                     </Menu>
-                    
+
                 </StackPanel>
             </TabItem>
         </TabControl>
         <Menu Grid.Row="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" >
+            <Hyperlink Click="Hyperlink_Click">HDT-Voice on GitHub</Hyperlink>
             <Button Content="Save Settings" Click="Button_Click" />
         </Menu>
+
     </Grid>
 </Controls:MetroWindow>

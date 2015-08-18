@@ -68,4 +68,8 @@ Partial Class MetroConfig
         comboStatusPosition.IsEnabled = checkShowStatusText.IsChecked
         checkShowLast.IsEnabled = checkShowStatusText.IsChecked
     End Sub
+
+    Private Sub Hyperlink_Click(sender As Object, e As System.Windows.RoutedEventArgs)
+        Process.Start("https://github.com/topher-au/HDT-Voice/")
+    End Sub
 End Class
