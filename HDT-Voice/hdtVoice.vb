@@ -171,6 +171,10 @@ Public Class hdtVoice
 
     'Speech recognition events
     Public Sub onSpeechRecognized(sender As Object, e As SpeechRecognizedEventArgs) Handles hsRecog.SpeechRecognized
+        If Not Game.IsRunning Then
+            Return
+        End If
+
         'If hearthstone is inactive, exit
         If Not checkActiveWindow() Then
             writeLog("Heard command """ & e.Result.Text & """ but Hearthstone was inactive")
@@ -770,10 +774,10 @@ Public Class hdtVoice
         If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GAME_TAG.CONTROLLER) = playerID Then
             Dim minionNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
             Dim totalMinions As Integer = boardFriendly.Count
-            Dim totalWidth = totalMinions * 9
-            Dim minionX = minionNum * 9
+            Dim totalWidth = totalMinions * 10
+            Dim minionX = minionNum * 10
 
-            Dim minX = 50 - (totalWidth / 2) + minionX - 5 + xOffset
+            Dim minX = 50 - (totalWidth / 2) + minionX - 7 + xOffset
             moveCursor(minX, 55)
             Return True
         End If
@@ -782,8 +786,8 @@ Public Class hdtVoice
         If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GAME_TAG.CONTROLLER) = opponentID Then
             Dim minionNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
             Dim totalMinions As Integer = boardOpposing.Count
-            Dim totalWidth = totalMinions * 9
-            Dim minionX = minionNum * 9
+            Dim totalWidth = totalMinions * 10
+            Dim minionX = minionNum * 10
 
             Dim minX = 50 - (totalWidth / 2) + minionX - 5 + xOffset
             moveCursor(minX, 40)
