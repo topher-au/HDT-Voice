@@ -55,6 +55,7 @@ Public Class hdtVoice
     Public opponentID As Integer = 0
     Public mulliganDone As Boolean
     Public updateInProgress As Boolean
+    Public GrammarEngine As New HDTGrammarEngine
     'Properties
     Private ReadOnly Property Entities As Entity()
         Get
@@ -88,7 +89,10 @@ Public Class hdtVoice
         'Start loading HDT-Voice
 
         'Write basic system information to logfile
-        writeLog("HDT-Voice running on " & My.Computer.Info.OSFullName & " " & My.Computer.Screen.WorkingArea.Width & "x" & My.Computer.Screen.WorkingArea.Height)
+
+        writeLog("HDT-Voice {0}.{1} | {2}", {My.Application.Info.Version.Major, My.Application.Info.Version.Minor, My.Computer.Info.OSFullName})
+        writeLog("--------------")
+        writeLog("Current screen resolution: {0}x{1}", {Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height})
         writeLog("Initializing speech recognition object")
 
         'Attempt to initialize speech recognition
@@ -96,12 +100,12 @@ Public Class hdtVoice
 
             Dim rec As IReadOnlyCollection(Of RecognizerInfo) = SpeechRecognitionEngine.InstalledRecognizers
             If rec.Count > 0 Then
-                writeLog("Installed recognizers: " & rec.Count)
+                writeLog("Installed recognizers: {0}", rec.Count)
                 For Each e In rec
                     writeLog(e.Culture.Name)
                 Next
-                writeLog("Initializing recognizer for: " & rec.First.Culture.Name)
-                hsRecog = New SpeechRecognitionEngine(New Globalization.CultureInfo(rec.First.Culture.Name))
+                writeLog("Initializing recognizer for: {0}", rec.First.Culture.Name)
+                hsRecog = New SpeechRecognitionEngine(rec.First.Culture)
             Else
                 writeLog("No speech recognizer found. Attempting to start engine anyway.")
                 hsRecog = New SpeechRecognitionEngine()
@@ -114,7 +118,7 @@ Public Class hdtVoice
             hsRecog.EndSilenceTimeoutAmbiguous = New TimeSpan(0, 0, 0, 0, 500)
             writeLog("Successfuly started speech recognition")
         Catch ex As Exception
-            writeLog("Error initializing speech recognition: " & ex.Message)
+            writeLog("Error initializing speech recognition: {0}", ex.Message)
             MsgBox("An error occurred initializing speech recognition: " & vbNewLine & ex.Message, vbOKOnly + vbCritical, "HDT-Voice")
         End Try
 
@@ -208,6 +212,10 @@ Public Class hdtVoice
     Public Sub updateRecognizer(Optional e = Nothing)
         hsRecog.RequestRecognizerUpdate()
     End Sub ' Request the SpeechRecognitionEngine update asynchronously
+    Public Sub onSpeechFailed() Handles hsRecog.SpeechRecognitionRejected
+        updateRecognizer()
+
+    End Sub
 
     'Action processor
     Public Sub actionWorker_DoWork() Handles actionWorker.DoWork
@@ -307,10 +315,16 @@ Public Class hdtVoice
         opponentID = Nothing
         mulliganDone = False
 
-        If Not IsNothing(PlayerEntity) Then _
-                playerID = PlayerEntity.GetTag(GAME_TAG.CONTROLLER)
-        If Not IsNothing(OpponentEntity) Then _
-                opponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
+        If Not IsNothing(PlayerEntity) Then
+            playerID = PlayerEntity.GetTag(GAME_TAG.CONTROLLER)
+            writeLog("Updated Opponent ID to {0}", playerID)
+        End If
+
+        If Not IsNothing(OpponentEntity) Then
+            opponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
+            writeLog("Updated Opponent ID to {0}", opponentID)
+        End If
+
 
     End Sub ' Runs when a new game is started
     Public Sub onMulligan(Optional c As Card = Nothing)
@@ -873,6 +887,7 @@ Public Class hdtVoice
     End Sub 'Updates the text on the status text block
     Public Function buildGrammar() As Grammar
 
+
         If Game.IsInMenu Then
             writeLog("IsInMenu=True - Building menu grammar")
             Dim menuGrammar As New GrammarBuilder
@@ -943,110 +958,21 @@ Public Class hdtVoice
             Return New Grammar(menuGrammar)
         End If
 
-        ' if the player or opponent entity is unknown, try initiate a new game
-        If Game.IsRunning And playerID = 0 Or opponentID = 0 Then
-            onNewGame()
+        If Not Game.IsRunning Then
+            writeLog("Game not running, Grammar build aborted")
+            Return Nothing
         End If
 
-        'generate names and numbers for all targets
-        Dim cardGrammar As New GrammarBuilder
+        ' if the player or opponent entity is unknown, try initiate a new game
+        If playerID = 0 Or opponentID = 0 Then
+            onNewGame()
+        End If
 
         Dim friendlyNames As New Choices("friendly", "my")
         Dim opposingNames As New Choices("opposing", "enemy", "opponent")
 
-        If handCards.Count > 0 Then
-            ' build grammar for cards in hand
-            Dim handGrammarNames, handGrammarNumbers, handGrammarCardNumbers As New Choices
-            For Each e In handCards
-                Dim CardName As New String(e.Card.Name)
-                Dim CardInstances = handCards.FindAll(Function(x) x.CardId = e.CardId)
-                If CardInstances.Count > 1 Then ' if we have multiple cards with the same name, add a numeric identifier
-                    If Not handGrammarNames.ToGrammarBuilder.DebugShowPhrases.Contains(CardName) Then
-                        handGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
-                        handGrammarNumbers.Add(New SemanticResultValue(e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
-                        handGrammarCardNumbers.Add(New SemanticResultValue("card " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
-                    Else
-                        Dim CardNum As Integer = CardInstances.IndexOf(CardInstances.Find(Function(x) x.Id = e.Id)) + 1
-                        CardName &= " " & CardNum.ToString
-                        handGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
-                        handGrammarNumbers.Add(New SemanticResultValue(e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
-                        handGrammarCardNumbers.Add(New SemanticResultValue("card " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
-                    End If
-                Else
-                    handGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
-                    handGrammarNumbers.Add(New SemanticResultValue(e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
-                    handGrammarCardNumbers.Add(New SemanticResultValue("card " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
-                End If
+        Dim cardGrammar As GrammarBuilder = GrammarEngine.FriendlyHand
 
-            Next
-            cardGrammar.Append(New SemanticResultKey("card", New Choices(handGrammarNames, handGrammarNumbers, handGrammarCardNumbers)))
-        End If
-
-        ' Build the grammar for friendly minions and hero
-        Dim friendlyGrammar As New GrammarBuilder ' Represents the names and numbers of minions, and the hero
-        Dim friendlyChoices As New Choices
-
-        If boardFriendly.Count > 0 Then
-            Dim friendlyGrammarNames, friendlyGrammarNumbers As New Choices
-            For Each e In boardFriendly
-                Dim CardName As New String(e.Card.Name)
-                Dim CardInstances = boardFriendly.FindAll(Function(x) x.CardId = e.CardId)
-
-                If CardInstances.Count > 1 Then ' More than one instance of the card on the board, append a number
-                    'If it's not in the grammar already, add an un-numbered minion
-                    If Not friendlyGrammarNames.ToGrammarBuilder.DebugShowPhrases.Contains(CardName) Then
-                        friendlyGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
-                        friendlyGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
-                    End If
-                    Dim CardNum As Integer = CardInstances.IndexOf(CardInstances.Find(Function(x) x.Id = e.Id)) + 1
-                    CardName &= " " & CardNum.ToString
-
-                End If
-                friendlyGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
-                friendlyGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
-            Next
-            friendlyChoices.Add(friendlyGrammarNames, friendlyGrammarNumbers)
-        End If
-
-        If Not IsNothing(PlayerEntity) Then
-            Dim friendlyHero As New Choices
-            friendlyHero.Add(New SemanticResultValue("hero", PlayerEntity.Id))
-            friendlyHero.Add(New SemanticResultValue("face", PlayerEntity.Id))
-            friendlyChoices.Add(friendlyHero)
-            friendlyGrammar.Append(New SemanticResultKey("friendly", friendlyChoices))
-        End If
-
-
-        ' Build grammar for opposing minions and hero
-        Dim opposingGrammar As New GrammarBuilder
-        Dim opposingChoices As New Choices
-        If boardOpposing.Count > 0 Then
-
-            Dim opposingGrammarNames, opposingGrammarNumbers As New Choices
-            For Each e In boardOpposing
-                Dim CardName As New String(e.Card.Name)
-                Dim CardInstances = boardOpposing.FindAll(Function(x) x.CardId = e.CardId)
-                If CardInstances.Count > 1 Then
-                    If Not opposingGrammarNames.ToGrammarBuilder.DebugShowPhrases.Contains(CardName) Then
-                        opposingGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
-                        opposingGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
-                    End If
-                    Dim CardNum As Integer = CardInstances.IndexOf(CardInstances.Find(Function(x) x.Id = e.Id)) + 1
-                    CardName &= " " & CardNum.ToString
-                End If
-                opposingGrammarNames.Add(New SemanticResultValue(CardName, e.Id))
-                opposingGrammarNumbers.Add(New SemanticResultValue("minion " & e.GetTag(GAME_TAG.ZONE_POSITION).ToString.Trim, e.Id))
-            Next
-            opposingChoices.Add(opposingGrammarNames, opposingGrammarNumbers)
-        End If
-
-        If Not IsNothing(OpponentEntity) Then
-            Dim opposingHero As New Choices
-            opposingHero.Add(New SemanticResultValue("hero", OpponentEntity.Id))
-            opposingHero.Add(New SemanticResultValue("face", OpponentEntity.Id))
-            opposingChoices.Add(opposingHero)
-            opposingGrammar.Append(New SemanticResultKey("opposing", New Choices(opposingChoices)))
-        End If
 
 
         ' Start building the final grammar
@@ -1054,46 +980,17 @@ Public Class hdtVoice
 
         ' Check if we're at the mulligan, if so only the mulligan grammar will be returned
         If Not Game.IsMulliganDone Then
-            writeLog("IsMulliganDone=False - Building mulligan grammar")
-            Dim mulliganBuilder As New GrammarBuilder
-            mulliganBuilder.Append(New SemanticResultKey("action", New SemanticResultValue("click", "mulligan")))
-            Dim mulliganChoices As New Choices
-            mulliganChoices.Add("confirm")
-            mulliganChoices.Add(cardGrammar)
-            mulliganBuilder.Append(New Choices(mulliganChoices, "confirm"))
-
-            finalChoices.Add(mulliganBuilder)
-            writeLog("Grammar building complete")
-            Return New Grammar(New GrammarBuilder(finalChoices))
+            writeLog("Building mulligan Grammar...")
+            Dim mulliganBuilder As GrammarBuilder = GrammarEngine.MulliganGrammar
+            Return New Grammar(New Choices(mulliganBuilder))
         End If
 
-        writeLog("Started building game grammar")
+        writeLog("Building game Grammar...")
 
-        Dim heroChoice = New Choices(New SemanticResultValue("hero power", "hero"))
-        'Attempt to read active hero power name
+        Dim friendlyGrammar As GrammarBuilder = GrammarEngine.FriendlyTargets
+        Dim opposingGrammar As GrammarBuilder = GrammarEngine.OpposingTargets
 
-        Dim heroPowerEntity As Entity = Nothing
-
-        Try
-            heroPowerEntity = Entities.First(Function(x)
-                                                 Dim cardType = x.GetTag(GAME_TAG.CARDTYPE)
-                                                 Dim cardTroller = x.GetTag(GAME_TAG.CONTROLLER)
-
-                                                 If cardType = Hearthstone.TAG_CARDTYPE.HERO_POWER And cardTroller = playerID And x.IsInPlay = True Then
-                                                     Return True
-                                                 End If
-
-                                                 Return False
-                                             End Function)
-        Catch ex As Exception
-            writeLog("Hero power not found!")
-        End Try
-        If Not IsNothing(heroPowerEntity) Then
-            Dim heroPowerName As String = heroPowerEntity.Card.Name
-            heroChoice.Add(New SemanticResultValue(heroPowerName, "hero"))
-        End If
-
-
+        Dim heroPowerGrammar As GrammarBuilder = GrammarEngine.HeroPower
 
         'build grammar for card actions
         If cardGrammar.DebugShowPhrases.Count Then
@@ -1170,7 +1067,7 @@ Public Class hdtVoice
             Dim heroFriendly As New GrammarBuilder
             If Not My.Settings.quickPlay Then _
                 heroFriendly.Append("use")
-            heroFriendly.Append(New SemanticResultKey("action", heroChoice))
+            heroFriendly.Append(New SemanticResultKey("action", heroPowerGrammar))
             heroFriendly.Append(New Choices("on", "to"))
             heroFriendly.Append(friendlyNames)
             heroFriendly.Append(friendlyGrammar)
@@ -1196,7 +1093,7 @@ Public Class hdtVoice
             Dim heroOpposing As New GrammarBuilder
             If Not My.Settings.quickPlay Then _
                 heroOpposing.Append("use")
-            heroOpposing.Append(New SemanticResultKey("action", heroChoice))
+            heroOpposing.Append(New SemanticResultKey("action", heroPowerGrammar))
             heroOpposing.Append(New Choices("on", "to"))
             heroOpposing.Append(opposingNames)
             heroOpposing.Append(opposingGrammar)
@@ -1213,7 +1110,7 @@ Public Class hdtVoice
         Dim heroPower As New GrammarBuilder
         If Not My.Settings.quickPlay Then _
             heroPower.Append("use") ' if quickplay is enabled, just say "hero power"
-        heroPower.Append(New SemanticResultKey("action", heroChoice))
+        heroPower.Append(New SemanticResultKey("action", heroPowerGrammar))
         finalChoices.Add(heroPower)
 
         Dim endTurn As New GrammarBuilder
@@ -1221,19 +1118,7 @@ Public Class hdtVoice
         endTurn.Append("turn")
         finalChoices.Add(endTurn)
 
-        Dim sayEmote As New GrammarBuilder
-        sayEmote.Append(New SemanticResultKey("action", "say"))
-        Dim sayChoices As New Choices
-        sayChoices.Add(New SemanticResultValue("thanks", "thanks"))
-        sayChoices.Add(New SemanticResultValue("thank you", "thanks"))
-        sayChoices.Add(New SemanticResultValue("well played", "well played"))
-        sayChoices.Add(New SemanticResultValue("greetings", "greetings"))
-        sayChoices.Add(New SemanticResultValue("hello", "greetings"))
-        sayChoices.Add(New SemanticResultValue("sorry", "sorry"))
-        sayChoices.Add(New SemanticResultValue("oops", "oops"))
-        sayChoices.Add(New SemanticResultValue("whoops", "oops"))
-        sayChoices.Add(New SemanticResultValue("threaten", "threaten"))
-        sayEmote.Append(New SemanticResultKey("emote", sayChoices))
+        Dim sayEmote As GrammarBuilder = GrammarEngine.SayEmote
         finalChoices.Add(sayEmote)
 
         Dim chooseOption As New GrammarBuilder
@@ -1267,6 +1152,7 @@ Public Class hdtVoice
             Return New Grammar(New GrammarBuilder("gramar error"))
         End Try
 
+        Return Nothing
 
     End Function 'Builds and returns grammar for the speech recognition engine
     Public Sub rebuildCardData()
@@ -1308,14 +1194,15 @@ Public Class hdtVoice
                                Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
                            End Function)
     End Sub 'Rebuilds data for cards in hand and on board
-    Public Sub writeLog(Line As String)
-        Line = "HDT-Voice: " & Line
-        Debug.WriteLine(Line)
+    Public Sub writeLog(LogLine As String, ParamArray args As Object())
+        Dim formatLine As String = String.Format(LogLine, args)
+        formatLine = String.Format("HDT-Voice: {0}", formatLine)
+        Debug.WriteLine(formatLine)
         If My.Settings.outputDebug Then
             If IsNothing(voiceLog) Then
                 voiceLog = New IO.StreamWriter("hdtvoicelog.txt")
             End If
-            voiceLog.WriteLine(Line)
+            voiceLog.WriteLine(formatLine)
             voiceLog.Flush()
         Else
             voiceLog = Nothing

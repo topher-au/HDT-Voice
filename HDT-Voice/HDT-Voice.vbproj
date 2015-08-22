@@ -82,6 +82,7 @@
     <Import Include="System.Threading.Tasks" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HDTGrammarEngine.vb" />
     <Compile Include="hdtPlugin.vb" />
     <Compile Include="hdtVoice.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
