@@ -157,8 +157,8 @@ Public Class hdtVoice
         GameEvents.OnOpponentHeroPower.Add(New Action(AddressOf updateRecognizer))
 
         'Handlers for plugin settings and overlay size
-        AddHandler My.Settings.PropertyChanged, AddressOf doOverlayLayout
-        AddHandler Overlay.OverlayCanvas.SizeChanged, AddressOf doOverlayLayout
+        AddHandler My.Settings.PropertyChanged, AddressOf updateOverlay
+        AddHandler Overlay.OverlayCanvas.SizeChanged, AddressOf updateOverlay
 
         timerReset.Interval = 3500
         timerReset.Enabled = True
@@ -325,7 +325,7 @@ Public Class hdtVoice
             writeLog("Updated Opponent ID to {0}", opponentID)
         End If
 
-
+        GrammarEngine.InitializeGame()
     End Sub ' Runs when a new game is started
     Public Sub onMulligan(Optional c As Card = Nothing)
         mulliganDone = True
@@ -835,7 +835,7 @@ Public Class hdtVoice
             Return False
         End If
     End Function 'Checks if the hearthstone window is active
-    Public Function doOverlayLayout() As System.Windows.SizeChangedEventHandler
+    Public Function updateOverlay() As System.Windows.SizeChangedEventHandler
         'Update positioning/visibility of status text
         If My.Settings.showStatusText = False Then
             hdtStatus.Visibility = System.Windows.Visibility.Hidden
@@ -968,13 +968,6 @@ Public Class hdtVoice
             onNewGame()
         End If
 
-        Dim friendlyNames As New Choices("friendly", "my")
-        Dim opposingNames As New Choices("opposing", "enemy", "opponent")
-
-        Dim cardGrammar As GrammarBuilder = GrammarEngine.FriendlyHand
-
-
-
         ' Start building the final grammar
         Dim finalChoices As New Choices
 
@@ -985,171 +978,34 @@ Public Class hdtVoice
             Return New Grammar(New Choices(mulliganBuilder))
         End If
 
-        writeLog("Building game Grammar...")
+        If Debugger.IsAttached Then _
+            finalChoices.Add(GrammarEngine.DebuggerGameCommands)
 
-        Dim friendlyGrammar As GrammarBuilder = GrammarEngine.FriendlyTargets
-        Dim opposingGrammar As GrammarBuilder = GrammarEngine.OpposingTargets
+        finalChoices.Add(GrammarEngine.UseHeroPowerGrammar)
+        finalChoices.Add(GrammarEngine.PlayCardGrammar)
+        finalChoices.Add(GrammarEngine.AttackTargetGrammar)
+        finalChoices.Add(GrammarEngine.ClickTargetGrammar)
+        finalChoices.Add(GrammarEngine.TargetTargetGrammar)
+        finalChoices.Add(GrammarEngine.SayEmote)
 
-        Dim heroPowerGrammar As GrammarBuilder = GrammarEngine.HeroPower
-
-        'build grammar for card actions
-        If cardGrammar.DebugShowPhrases.Count Then
-            'target card
-            Dim targetCards As New GrammarBuilder
-            targetCards.Append(New SemanticResultKey("action", "target"))
-            targetCards.Append("card")
-            targetCards.Append(cardGrammar)
-            finalChoices.Add(targetCards)
-
-
-
-            'play card to the left of friendly target
-            If friendlyGrammar.DebugShowPhrases.Count Then
-                Dim playToFriendly As New GrammarBuilder
-                If Not My.Settings.quickPlay Then _
-                    playToFriendly.Append("play")
-                playToFriendly.Append(cardGrammar)
-                playToFriendly.Append(New SemanticResultKey("action", New SemanticResultValue(New Choices("on", "to"), "play")))
-                playToFriendly.Append(friendlyNames)
-                playToFriendly.Append(friendlyGrammar)
-
-                finalChoices.Add(playToFriendly)
-            End If
-
-            'play card to opposing target
-            If opposingGrammar.DebugShowPhrases.Count Then
-                Dim playToOpposing As New GrammarBuilder
-                If Not My.Settings.quickPlay Then _
-                    playToOpposing.Append("play")
-                playToOpposing.Append(cardGrammar)
-                playToOpposing.Append(New SemanticResultKey("action", New SemanticResultValue(New Choices("on", "to"), "play")))
-                playToOpposing.Append(opposingNames)
-                playToOpposing.Append(opposingGrammar)
-
-                finalChoices.Add(playToOpposing)
-            End If
-
-            'play card with no target
-            Dim playCards As New GrammarBuilder
-            playCards.Append(New SemanticResultKey("action", "play"))
-            playCards.Append(cardGrammar)
-            finalChoices.Add(playCards)
-
-        End If
-
-
-
-        'build grammar friendly minion actions
-        If friendlyGrammar.DebugShowPhrases.Count Then
-            'target friendly minion
-            Dim targetFriendly As New GrammarBuilder
-            targetFriendly.Append(New SemanticResultKey("action", "target"))
-            targetFriendly.Append(friendlyNames)
-            targetFriendly.Append(friendlyGrammar)
-            finalChoices.Add(targetFriendly)
-
-            'attack target with friendly minion
-            Dim attackFriendly As New GrammarBuilder
-            attackFriendly.Append(New SemanticResultKey("action", "attack"))
-            attackFriendly.Append(opposingGrammar)
-            attackFriendly.Append("with")
-            attackFriendly.Append(friendlyGrammar)
-            finalChoices.Add(attackFriendly)
-
-            'SHORTCUT attack target with minion
-            Dim goTarget As New GrammarBuilder
-            goTarget.Append(friendlyGrammar)
-            goTarget.Append(New SemanticResultKey("action", New Choices(New SemanticResultValue("go", "attack"), New SemanticResultValue("attack", "attack"))))
-            goTarget.Append(opposingGrammar)
-            finalChoices.Add(goTarget)
-
-            'use hero power on friendly target
-            Dim heroFriendly As New GrammarBuilder
-            If Not My.Settings.quickPlay Then _
-                heroFriendly.Append("use")
-            heroFriendly.Append(New SemanticResultKey("action", heroPowerGrammar))
-            heroFriendly.Append(New Choices("on", "to"))
-            heroFriendly.Append(friendlyNames)
-            heroFriendly.Append(friendlyGrammar)
-            finalChoices.Add(heroFriendly)
-
-            'click friendly target
-            Dim clickFriendly As New GrammarBuilder
-            clickFriendly.Append(New SemanticResultKey("action", "click"))
-            clickFriendly.Append(friendlyNames)
-            clickFriendly.Append(friendlyGrammar)
-            finalChoices.Add(clickFriendly)
-
-
-        End If
-
-        If opposingGrammar.DebugShowPhrases.Count Then
-            Dim targetOpposing As New GrammarBuilder
-            targetOpposing.Append(New SemanticResultKey("action", "target"))
-            targetOpposing.Append(opposingNames)
-            targetOpposing.Append(opposingGrammar)
-            finalChoices.Add(targetOpposing)
-
-            Dim heroOpposing As New GrammarBuilder
-            If Not My.Settings.quickPlay Then _
-                heroOpposing.Append("use")
-            heroOpposing.Append(New SemanticResultKey("action", heroPowerGrammar))
-            heroOpposing.Append(New Choices("on", "to"))
-            heroOpposing.Append(opposingNames)
-            heroOpposing.Append(opposingGrammar)
-            finalChoices.Add(heroOpposing)
-
-            'click opposing target
-            Dim clickOpposing As New GrammarBuilder
-            clickOpposing.Append(New SemanticResultKey("action", "click"))
-            clickOpposing.Append(opposingNames)
-            clickOpposing.Append(opposingGrammar)
-            finalChoices.Add(clickOpposing)
-        End If
-
-        Dim heroPower As New GrammarBuilder
-        If Not My.Settings.quickPlay Then _
-            heroPower.Append("use") ' if quickplay is enabled, just say "hero power"
-        heroPower.Append(New SemanticResultKey("action", heroPowerGrammar))
-        finalChoices.Add(heroPower)
+        finalChoices.Add(GrammarEngine.ChooseOptionGrammar(4))
 
         Dim endTurn As New GrammarBuilder
         endTurn.Append(New SemanticResultKey("action", "end"))
         endTurn.Append("turn")
         finalChoices.Add(endTurn)
 
-        Dim sayEmote As GrammarBuilder = GrammarEngine.SayEmote
-        finalChoices.Add(sayEmote)
-
-        Dim chooseOption As New GrammarBuilder
-        Dim maxOptions = 4
-        Dim optionChoices As New Choices
-        For optMax = 1 To maxOptions
-            optionChoices.Add(optMax.ToString)
-        Next
-
-        chooseOption.Append(New SemanticResultKey("action", "choose"))
-        chooseOption.Append("option")
-        chooseOption.Append(New SemanticResultKey("option", optionChoices))
-        chooseOption.Append("of")
-        chooseOption.Append(New SemanticResultKey("max", optionChoices))
-        finalChoices.Add(chooseOption)
 
         finalChoices.Add(New SemanticResultKey("action", "click"))
         finalChoices.Add(New SemanticResultKey("action", "cancel"))
 
-        If Debugger.IsAttached Then
-            finalChoices.Add("debug show cards")
-            finalChoices.Add("debug show friendlies")
-            finalChoices.Add("debug show enemies")
-        End If
 
-        writeLog("Grammar building complete")
+
         Try
             Return New Grammar(New GrammarBuilder(finalChoices))
         Catch ex As Exception
             writeLog("Exception when building grammar: " & ex.Message)
-            Return New Grammar(New GrammarBuilder("gramar error"))
+            Return New Grammar(New GrammarBuilder("GRAMMAR ERROR"))
         End Try
 
         Return Nothing
