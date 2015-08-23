@@ -824,13 +824,13 @@ Public Class hdtVoice
         moveCursorToEntity(endEntity, endXOffset)
         endDrag()
     End Sub
-    Public Function moveCursorToEntity(EntityID As Integer, Optional xOffset As Integer = 0)
+    Public Sub moveCursorToEntity(EntityID As Integer, Optional xOffset As Integer = 0)
         Dim targetEntity As Entity
 
         Try 'Try and find the entity in the game
             targetEntity = Entities.First(Function(x) x.Id = EntityID)
         Catch ex As Exception
-            Return False
+            Return
         End Try
 
         'First, check if the entity is a card in our hand
@@ -842,7 +842,7 @@ Public Class hdtVoice
             Dim x = (((cardNum) / (totalCards)) * handwidth) - (handwidth / 2) - 0.8 + xOffset
             Dim y = (x * -0.16) ^ 2
             moveCursor(x + 44, y + 89)
-            Return True
+            Return
         End If
 
         'Next, check whether it is a friendly minion
@@ -854,7 +854,7 @@ Public Class hdtVoice
 
             Dim minX = 50 - (totalWidth / 2) + minionX - 7 + xOffset
             moveCursor(minX, 55)
-            Return True
+            Return
         End If
 
         'Then, check whether it is an opposing minion
@@ -866,24 +866,24 @@ Public Class hdtVoice
 
             Dim minX = 50 - (totalWidth / 2) + minionX - 5 + xOffset
             moveCursor(minX, 40)
-            Return True
+            Return
 
         End If
 
         'Finally, check whether it is a hero
         If targetEntity.IsPlayer Then
             moveCursor(50, 75)
-            Return True
+            Return
         End If
 
         If targetEntity.IsOpponent Then
             moveCursor(50, 20)
-            Return True
+            Return
         End If
 
-        Return False 'failed to locate entity on the board
+        Return 'failed to locate entity on the board
 
-    End Function
+    End Sub
     Public Sub moveCursorToOption(optionNum As Integer, totalOptions As Integer)
         Dim optionSize As Integer = 20
         Dim optionsWidth As Integer = totalOptions * optionSize

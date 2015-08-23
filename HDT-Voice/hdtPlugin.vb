@@ -40,7 +40,7 @@ Public Class hdtPlugin
 
     Public ReadOnly Property Version As Version Implements IPlugin.Version
         Get
-            Return New Version(0, 6, 4)
+            Return New Version(0, 7, 0)
         End Get
     End Property
 
