@@ -8,21 +8,20 @@ Imports Hearthstone_Deck_Tracker.Hearthstone.Entities
 Public Class HDTGrammarEngine
     Private handCards, boardFriendly, boardOpposing As New List(Of Entity)
 
-    Private playerID As Integer = 0
-    Private opponentID As Integer = 0
+    Private friendlyID As Integer = 0
+    Private opposingID As Integer = 0
 
-    Private FriendlyNames As New Choices("my", "friendly")
-    Private OpposingNames As New Choices("enemy", "opposing", "choices")
+    Private friendlyNames As New Choices("my", "friendly")
+    Private opposingNames As New Choices("enemy", "opposing", "choices")
 
-    Private myHand As GrammarBuilder = FriendlyHand()
-    Private friendlyTargets As GrammarBuilder = FriendlyTargetGrammar()
-    Private opposingTargets As GrammarBuilder = OpposingTargetGrammar()
+    Private myHand As GrammarBuilder
+    Private friendlyTargets As GrammarBuilder
+    Private opposingTargets As GrammarBuilder
 
     Public Function FriendlyHand() As GrammarBuilder
-
-        Dim cardGrammar As New GrammarBuilder
-
         If handCards.Count > 0 Then
+            Dim cardGrammar As New GrammarBuilder
+
             ' build grammar for cards in hand
             Dim handGrammarNames, handGrammarNumbers, handGrammarCardNumbers As New Choices
             For Each e In handCards
@@ -50,9 +49,9 @@ Public Class HDTGrammarEngine
             cardGrammar.Append(New SemanticResultKey("card", New Choices(handGrammarNames, handGrammarNumbers, handGrammarCardNumbers)))
             Return cardGrammar
         Else
-            Return Nothing
+            Return New GrammarBuilder("null")
         End If
-    End Function
+    End Function            ' Grammar for cards in hand
     Public Function FriendlyTargetGrammar() As GrammarBuilder
         ' Build the grammar for friendly minions and hero
         Dim friendlyBuilder As New GrammarBuilder ' Represents the names and numbers of minions, and the hero
@@ -90,7 +89,7 @@ Public Class HDTGrammarEngine
 
         friendlyBuilder.Append(New SemanticResultKey("friendly", friendlyChoices))
         Return friendlyBuilder
-    End Function
+    End Function    ' Grammar for friendly minions and hero
     Public Function OpposingTargetGrammar() As GrammarBuilder
         ' Build grammar for opposing minions and hero
         Dim opposingBuilder As New GrammarBuilder
@@ -124,6 +123,74 @@ Public Class HDTGrammarEngine
 
         opposingBuilder.Append(New SemanticResultKey("opposing", New Choices(opposingChoices)))
         Return opposingBuilder
+    End Function    ' Grammar for opposing minions and hero
+    Public Function MenuGrammar() As GrammarBuilder
+        Dim menuBuilder As New GrammarBuilder
+        Dim menuChoices As New Choices
+
+
+        menuChoices.Add(New SemanticResultKey("menu", "play"))
+        menuChoices.Add(New SemanticResultKey("menu", "casual mode"))
+        menuChoices.Add(New SemanticResultKey("menu", "ranked mode"))
+        menuChoices.Add(New SemanticResultKey("menu", "basic decks"))
+        menuChoices.Add(New SemanticResultKey("menu", "custom decks"))
+        menuChoices.Add(New SemanticResultKey("menu", "start game"))
+
+        menuChoices.Add(New SemanticResultKey("menu", "solo"))
+        menuChoices.Add(New SemanticResultKey("menu", "versus mage"))
+        menuChoices.Add(New SemanticResultKey("menu", "versus hunter"))
+        menuChoices.Add(New SemanticResultKey("menu", "versus warrior"))
+        menuChoices.Add(New SemanticResultKey("menu", "versus shaman"))
+        menuChoices.Add(New SemanticResultKey("menu", "versus druid"))
+        menuChoices.Add(New SemanticResultKey("menu", "versus priest"))
+        menuChoices.Add(New SemanticResultKey("menu", "versus rogue"))
+        menuChoices.Add(New SemanticResultKey("menu", "versus paladin"))
+        menuChoices.Add(New SemanticResultKey("menu", "versus warlock"))
+
+        menuChoices.Add(New SemanticResultKey("menu", "arena"))
+        menuChoices.Add(New SemanticResultKey("menu", "start arena"))
+        menuChoices.Add(New SemanticResultKey("menu", "buy arena with gold"))
+        menuChoices.Add(New Choices(New SemanticResultKey("menu", "cancel arena"),
+                                    New SemanticResultKey("menu", New SemanticResultValue("OK", "cancel arena")),
+                                    New SemanticResultKey("menu", New SemanticResultValue("choose", "cancel arena"))))
+        menuChoices.Add(New SemanticResultKey("menu", "hero 1"))
+        menuChoices.Add(New SemanticResultKey("menu", "hero 2"))
+        menuChoices.Add(New SemanticResultKey("menu", "hero 3"))
+        menuChoices.Add(New SemanticResultKey("menu", "card 1"))
+        menuChoices.Add(New SemanticResultKey("menu", "card 2"))
+        menuChoices.Add(New SemanticResultKey("menu", "card 3"))
+        menuChoices.Add(New SemanticResultKey("menu", "confirm"))
+
+        menuChoices.Add(New Choices(New SemanticResultKey("menu", "brawl"),
+                                    New SemanticResultKey("menu", New SemanticResultValue("tavern brawl", "brawl"))))
+        menuChoices.Add(New SemanticResultKey("menu", "start brawl"))
+
+        menuChoices.Add(New SemanticResultKey("menu", "open packs"))
+        menuChoices.Add(New SemanticResultKey("menu", "open top pack"))
+        menuChoices.Add(New SemanticResultKey("menu", "open bottom pack"))
+        menuChoices.Add(New SemanticResultKey("menu", "open card 1"))
+        menuChoices.Add(New SemanticResultKey("menu", "open card 2"))
+        menuChoices.Add(New SemanticResultKey("menu", "open card 3"))
+        menuChoices.Add(New SemanticResultKey("menu", "open card 4"))
+        menuChoices.Add(New SemanticResultKey("menu", "open card 5"))
+        menuChoices.Add(New SemanticResultKey("menu", "done"))
+
+        menuChoices.Add(New SemanticResultKey("menu", "quest log"))
+
+        menuChoices.Add(New SemanticResultKey("menu", "cancel"))
+        menuChoices.Add(New SemanticResultKey("menu", "back"))
+
+        Dim deckGrammar As New GrammarBuilder
+        Dim deckChoices As New Choices
+        deckGrammar.Append(New SemanticResultKey("menu", "deck"))
+        For i = 1 To 9
+            deckChoices.Add(New SemanticResultKey("deck", i.ToString))
+        Next
+        deckGrammar.Append(deckChoices)
+        menuChoices.Add(deckGrammar)
+        menuBuilder.Append(menuChoices)
+
+        Return menuBuilder
     End Function
     Public Function MulliganGrammar() As GrammarBuilder
 
@@ -133,10 +200,10 @@ Public Class HDTGrammarEngine
         mulliganBuilder.Append(New SemanticResultKey("action", New SemanticResultValue("click", "mulligan")))
         mulliganChoices.Add("confirm")
         mulliganChoices.Add(myHand)
-        mulliganBuilder.Append(New Choices(mulliganChoices, New SemanticResultValue("confirm", "mulligan")))
+        mulliganBuilder.Append(mulliganChoices)
 
         Return mulliganBuilder
-    End Function
+    End Function          ' Grammar for mulligan cards and confirm
     Public Function HeroPowerGrammar() As GrammarBuilder
         Dim heroChoice = New Choices(New SemanticResultValue("hero power", "hero"))
         'Attempt to read active hero power name
@@ -149,7 +216,7 @@ Public Class HDTGrammarEngine
                                                       Dim cardInPlay = x.IsInPlay
 
                                                       If cardType = Hearthstone.TAG_CARDTYPE.HERO_POWER And
-                                                                cardController = playerID And
+                                                                cardController = friendlyID And
                                                                 x.IsInPlay = True Then _
                                                                     Return True
 
@@ -164,7 +231,7 @@ Public Class HDTGrammarEngine
         Else
             Return Nothing
         End If
-    End Function
+    End Function         ' Grammar for name of hero power
     Public Function PlayCardGrammar() As GrammarBuilder
         Dim playChoices As New Choices
 
@@ -187,7 +254,7 @@ Public Class HDTGrammarEngine
                     playToFriendly.Append("play")
                 playToFriendly.Append(myHand)
                 playToFriendly.Append(New SemanticResultKey("action", New SemanticResultValue(New Choices("on", "to"), "play")))
-                playToFriendly.Append(FriendlyNames)
+                playToFriendly.Append(friendlyNames)
                 playToFriendly.Append(friendlyTargets)
 
                 playChoices.Add(playToFriendly)
@@ -200,7 +267,7 @@ Public Class HDTGrammarEngine
                     playToOpposing.Append("play")
                 playToOpposing.Append(myHand)
                 playToOpposing.Append(New SemanticResultKey("action", New SemanticResultValue(New Choices("on", "to"), "play")))
-                playToOpposing.Append(OpposingNames)
+                playToOpposing.Append(opposingNames)
                 playToOpposing.Append(opposingTargets)
 
                 playChoices.Add(playToOpposing)
@@ -214,7 +281,7 @@ Public Class HDTGrammarEngine
 
         End If
         Return New GrammarBuilder(playChoices)
-    End Function
+    End Function          ' Grammar for playing a card
     Public Function AttackTargetGrammar() As GrammarBuilder
         Dim attackChoices As New Choices
 
@@ -234,7 +301,7 @@ Public Class HDTGrammarEngine
         attackChoices.Add(goTarget)
 
         Return New GrammarBuilder(attackChoices)
-    End Function
+    End Function      ' Grammar for attacking an enemy minion
     Public Function UseHeroPowerGrammar() As GrammarBuilder
         Dim heroTargetChoices As New Choices
 
@@ -251,7 +318,7 @@ Public Class HDTGrammarEngine
             heroFriendly.Append("use")
         heroFriendly.Append(New SemanticResultKey("action", HeroPowerGrammar))
         heroFriendly.Append(New Choices("on", "to"))
-        heroFriendly.Append(FriendlyNames)
+        heroFriendly.Append(friendlyNames)
         heroFriendly.Append(friendlyTargets)
         heroTargetChoices.Add(heroFriendly)
 
@@ -261,48 +328,48 @@ Public Class HDTGrammarEngine
             heroOpposing.Append("use")
         heroOpposing.Append(New SemanticResultKey("action", HeroPowerGrammar))
         heroOpposing.Append(New Choices("on", "to"))
-        heroOpposing.Append(OpposingNames)
+        heroOpposing.Append(opposingNames)
         heroOpposing.Append(opposingTargets)
         heroTargetChoices.Add(heroOpposing)
 
         Return New GrammarBuilder(heroTargetChoices)
-    End Function
+    End Function      ' Grammar for using hero power
     Public Function ClickTargetGrammar() As GrammarBuilder
         Dim clickChoices As New Choices
 
         ' click <friendly>
         Dim clickFriendly As New GrammarBuilder
         clickFriendly.Append(New SemanticResultKey("action", "click"))
-        clickFriendly.Append(FriendlyNames)
+        clickFriendly.Append(friendlyNames)
         clickFriendly.Append(friendlyTargets)
         clickChoices.Add(clickFriendly)
 
         ' click <opposing>
         Dim clickOpposing As New GrammarBuilder
         clickOpposing.Append(New SemanticResultKey("action", "click"))
-        clickOpposing.Append(OpposingNames)
+        clickOpposing.Append(opposingNames)
         clickOpposing.Append(opposingTargets)
         clickChoices.Add(clickOpposing)
 
         Return New GrammarBuilder(clickChoices)
-    End Function
+    End Function       ' Grammar for clicking target
     Public Function TargetTargetGrammar() As GrammarBuilder
         Dim targetChoices As New Choices
 
         Dim targetFriendly As New GrammarBuilder
         targetFriendly.Append(New SemanticResultKey("action", "target"))
-        targetFriendly.Append(FriendlyNames)
+        targetFriendly.Append(friendlyNames)
         targetFriendly.Append(friendlyTargets)
         targetChoices.Add(targetFriendly)
 
         Dim targetOpposing As New GrammarBuilder
         targetOpposing.Append(New SemanticResultKey("action", "target"))
-        targetOpposing.Append(OpposingNames)
+        targetOpposing.Append(opposingNames)
         targetOpposing.Append(opposingTargets)
         targetChoices.Add(targetOpposing)
 
         Return New GrammarBuilder(targetChoices)
-    End Function
+    End Function      ' Grammar for moving cursor to target
     Public Function ChooseOptionGrammar(Optional maxOptions As Integer = 4) As GrammarBuilder
         Dim chooseOption As New GrammarBuilder
         Dim optionChoices As New Choices
@@ -316,16 +383,7 @@ Public Class HDTGrammarEngine
         chooseOption.Append("of")
         chooseOption.Append(New SemanticResultKey("max", optionChoices))
         Return chooseOption
-    End Function
-
-    Public Function DebuggerGameCommands() As GrammarBuilder
-        Dim debugChoices As New Choices
-        debugChoices.Add("debug show cards")
-        debugChoices.Add("debug show friendlies")
-        debugChoices.Add("debug show enemies")
-        Return New GrammarBuilder(debugChoices)
-    End Function
-
+    End Function    ' Grammar for selecting a card option
     Public Function SayEmote() As GrammarBuilder
         Dim sayBuilder As New GrammarBuilder
         sayBuilder.Append(New SemanticResultKey("action", "say"))
@@ -341,24 +399,24 @@ Public Class HDTGrammarEngine
         sayChoices.Add(New SemanticResultValue("threaten", "threaten"))
         sayBuilder.Append(New SemanticResultKey("emote", sayChoices))
         Return sayBuilder
-    End Function
-
-    Public Sub New()
-        RefreshGameData()
-    End Sub
+    End Function                 ' Grammar for saying emotes
+    Public Function DebuggerGameCommands() As GrammarBuilder
+        Dim debugChoices As New Choices
+        debugChoices.Add("debug show cards")
+        debugChoices.Add("debug show friendlies")
+        debugChoices.Add("debug show enemies")
+        Return New GrammarBuilder(debugChoices)
+    End Function     ' Debugger only commands
     Public Sub InitializeGame()
         ' Initialize controller IDs
-        playerID = Nothing
-        opponentID = Nothing
+        friendlyID = Nothing
+        opposingID = Nothing
 
-        If Not IsNothing(PlayerEntity) Then
-            playerID = PlayerEntity.GetTag(GAME_TAG.CONTROLLER)
+        If Not IsNothing(PlayerEntity) And Not IsNothing(OpponentEntity) Then
+            friendlyID = PlayerEntity.GetTag(GAME_TAG.CONTROLLER)
+            opposingID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
+            RefreshGameData()
         End If
-
-        If Not IsNothing(OpponentEntity) Then
-            opponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
-        End If
-        RefreshGameData()
     End Sub
     Public Sub RefreshGameData()
         ' Build list of cards in hand
@@ -369,7 +427,7 @@ Public Class HDTGrammarEngine
 
         ' Recurse through list of game entities
         For Each e In Entities
-            If e.IsInHand And e.GetTag(GAME_TAG.CONTROLLER) = playerID Then
+            If e.IsInHand And e.GetTag(GAME_TAG.CONTROLLER) = friendlyID Then
                 ' If entity is in player hand then add to list
                 handCards.Add(e)
             End If
@@ -392,9 +450,9 @@ Public Class HDTGrammarEngine
 
         For Each e In Entities
             If e.IsInPlay And e.IsMinion Then
-                If e.IsControlledBy(playerID) Then
+                If e.IsControlledBy(friendlyID) Then
                     boardFriendly.Add(e)
-                ElseIf e.IsControlledBy(opponentID) Then
+                ElseIf e.IsControlledBy(opposingID) Then
                     boardOpposing.Add(e)
                 End If
             End If
@@ -412,32 +470,25 @@ Public Class HDTGrammarEngine
         friendlyTargets = FriendlyTargetGrammar()
         opposingTargets = OpposingTargetGrammar()
         myHand = FriendlyHand()
-    End Sub 'Rebuilds data for cards in hand and on board
+    End Sub ' Rebuilds arrays with data for cards in hand and on board
 
     Private ReadOnly Property Entities As Entity()
         Get
             ' Clone entities from game and return as array
+
             Return Helper.DeepClone(Game.Entities).Values.ToArray
         End Get
     End Property ' The list of entities for the current game
     Private ReadOnly Property PlayerEntity As Entity
         Get
             ' Return the Entity representing the player
-            Try
-                Return Entities.First(Function(x) x.IsPlayer())
-            Catch ex As Exception
-                Return Nothing
-            End Try
+            Return Entities.FirstOrDefault(Function(x) x.IsPlayer())
         End Get
     End Property ' The player's entity
     Private ReadOnly Property OpponentEntity As Entity
         Get
             ' Return the Entity representing the player
-            Try
-                Return Entities.First(Function(x) x.IsOpponent())
-            Catch ex As Exception
-                Return Nothing
-            End Try
+            Return Entities.FirstOrDefault(Function(x) x.IsOpponent())
         End Get
     End Property ' The opponent entity
 End Class

@@ -6,7 +6,7 @@
              xmlns:system="clr-namespace:System;assembly=mscorlib"
              xmlns:local="clr-namespace:HDTVoice"
              mc:Ignorable="d"
-             xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro" EnableDWMDropShadow="True" Width="320" Height="350" Title="HDT-Voice Configuration" WindowStartupLocation="CenterScreen" ShowInTaskbar="False" ResizeMode="NoResize" IsMaxRestoreButtonEnabled="False" IsMinButtonEnabled="False">
+             xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro" EnableDWMDropShadow="True" Width="320" Height="369.608" Title="HDT-Voice Configuration" WindowStartupLocation="CenterScreen" ShowInTaskbar="False" ResizeMode="NoResize" IsMaxRestoreButtonEnabled="False" IsMinButtonEnabled="False">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition />
@@ -43,10 +43,12 @@
                             <RadioButton Name="radioToggle" Content="Toggle (F12)" Margin="4"/>
                             <RadioButton Name="radioPTT" Content="Push-to-Talk (Left Shift)" Margin="4"/>
                         </StackPanel>
+
                     </Menu>
 
                 </StackPanel>
             </TabItem>
+
         </TabControl>
         <Menu Grid.Row="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" >
             <Hyperlink Click="Hyperlink_Click">HDT-Voice on GitHub</Hyperlink>
