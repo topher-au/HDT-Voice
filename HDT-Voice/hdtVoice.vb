@@ -45,7 +45,7 @@ Public Class hdtVoice
     Public WithEvents timerReset As New Timer
 
     'Overlay elements
-    Public overlayCanvas As Canvas = Overlay.OverlayCanvas 'the main overlay object
+    Public overlayCanvas As Canvas = Core.OverlayCanvas 'the main overlay object
     Public hdtStatus As HearthstoneTextBlock 'status text
 
     Public sreListen As Boolean ' Should we be listening?
@@ -60,7 +60,7 @@ Public Class hdtVoice
     Private ReadOnly Property Entities As Entity()
         Get
             ' Clone entities from game and return as array
-            Dim EntArray = Helper.DeepClone(Game.Entities).Values.ToArray
+            Dim EntArray = Helper.DeepClone(Core.Game.Entities).Values.ToArray
             Return EntArray
         End Get
     End Property ' The list of entities for the current game
@@ -150,7 +150,7 @@ Public Class hdtVoice
 
         'Handlers for plugin settings and overlay size
         AddHandler My.Settings.PropertyChanged, AddressOf updateOverlay
-        AddHandler Overlay.OverlayCanvas.SizeChanged, AddressOf updateOverlay
+        AddHandler Core.OverlayCanvas.SizeChanged, AddressOf updateOverlay
 
         timerReset.Interval = 3500
         timerReset.Enabled = True
@@ -166,7 +166,7 @@ Public Class hdtVoice
     End Sub ' Run when the plugin is first initialized
     Public Function BuildGrammar() As Grammar
 
-        If Game.IsInMenu Then
+        If Core.Game.IsInMenu Then
             writeLog("Menu grammar active")
             Return New Grammar(GrammarEngine.MenuGrammar)
         End If
@@ -176,15 +176,16 @@ Public Class hdtVoice
             onNewGame()
         End If
 
+        GrammarEngine.RefreshGameData()
+
         ' Check if we're at the mulligan, if so only the mulligan grammar will be returned
-        If Not Game.IsMulliganDone Then
+        If Not Core.Game.IsMulliganDone Then
             writeLog("Building mulligan Grammar...")
-            GrammarEngine.RefreshGameData()
+
             Dim mg = GrammarEngine.MulliganGrammar
             Return New Grammar(mg)
         End If
 
-        GrammarEngine.RefreshGameData()
 
         ' Start building final Choices for the Grammar
         Dim finalChoices As New Choices
@@ -264,7 +265,7 @@ Public Class hdtVoice
         hsRecog.RequestRecognizerUpdate()
     End Sub ' Request the SpeechRecognitionEngine update asynchronously
     Public Sub onSpeechRecognized(sender As Object, e As SpeechRecognizedEventArgs) Handles hsRecog.SpeechRecognized
-        If Not Game.IsRunning Then
+        If Not Core.Game.IsRunning Then
             Return
         End If
 
@@ -293,7 +294,7 @@ Public Class hdtVoice
 
     End Sub ' Handles processing recognized speech input
     Public Sub onRecognizerUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles hsRecog.RecognizerUpdateReached
-        If Not Game.IsRunning Then Exit Sub ' do nothing if the game is not running
+        If Not Core.Game.IsRunning Then Exit Sub ' do nothing if the game is not running
         updateInProgress = True
         hsRecog.UnloadAllGrammars()
         hsRecog.LoadGrammar(BuildGrammar)
@@ -382,7 +383,7 @@ Public Class hdtVoice
         End If
 
         'do menu processing
-        If e.Result.Semantics.ContainsKey("menu") And Game.IsInMenu Then
+        If e.Result.Semantics.ContainsKey("menu") And Core.Game.IsInMenu Then
             doMenu(e)
         End If
 
@@ -764,7 +765,7 @@ Public Class hdtVoice
         If e.Result.Semantics.ContainsKey("card") Then
             Dim targetID = e.Result.Semantics("card").Value
             Dim targetNum = Entities.First(Function(x) x.Id = targetID).GetTag(GAME_TAG.ZONE_POSITION)
-            If Game.OpponentHasCoin Then
+            If Core.Game.OpponentHasCoin Then
                 moveCursorToOption(targetNum, 3)
                 sendLeftClick()
             Else

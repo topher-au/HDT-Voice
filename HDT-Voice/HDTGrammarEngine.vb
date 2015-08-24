@@ -191,7 +191,7 @@ Public Class HDTGrammarEngine
         menuBuilder.Append(menuChoices)
 
         Return menuBuilder
-    End Function
+    End Function              ' Grammar for when game is in Menu
     Public Function MulliganGrammar() As GrammarBuilder
 
         Dim mulliganBuilder As New GrammarBuilder
@@ -475,8 +475,7 @@ Public Class HDTGrammarEngine
     Private ReadOnly Property Entities As Entity()
         Get
             ' Clone entities from game and return as array
-
-            Return Helper.DeepClone(Game.Entities).Values.ToArray
+            Return Helper.DeepClone(Core.Game.Entities).Values.ToArray
         End Get
     End Property ' The list of entities for the current game
     Private ReadOnly Property PlayerEntity As Entity
