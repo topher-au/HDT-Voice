@@ -4,14 +4,15 @@ Imports System.Windows.Controls
 Imports System.Windows.Forms
 Imports System.ComponentModel
 Imports System.Drawing
-Imports System.Windows.Media
-Imports System.Windows.Shapes
 
 Imports Hearthstone_Deck_Tracker
 Imports Hearthstone_Deck_Tracker.API
 Imports Hearthstone_Deck_Tracker.Enums
 Imports Hearthstone_Deck_Tracker.Hearthstone
 Imports Hearthstone_Deck_Tracker.Hearthstone.Entities
+
+Imports HDTVoice.GrammarEngine
+
 Public Class hdtVoice
     ' Windows API Declarations
     Public Declare Function FindWindow Lib "user32" Alias "FindWindowA" (ByVal lpClassName As String, ByVal lpWindowName As String) As IntPtr
@@ -176,8 +177,6 @@ Public Class hdtVoice
             onNewGame()
         End If
 
-        GrammarEngine.RefreshGameData()
-
         ' Check if we're at the mulligan, if so only the mulligan grammar will be returned
         If Not Core.Game.IsMulliganDone Then
             writeLog("Building mulligan Grammar...")
@@ -187,30 +186,10 @@ Public Class hdtVoice
         End If
 
 
-        ' Start building final Choices for the Grammar
-        Dim finalChoices As New Choices
-
-        If Debugger.IsAttached Then _
-            finalChoices.Add(GrammarEngine.DebuggerGameCommands)
-
-        finalChoices.Add(GrammarEngine.UseHeroPowerGrammar)
-        finalChoices.Add(GrammarEngine.PlayCardGrammar)
-        finalChoices.Add(GrammarEngine.AttackTargetGrammar)
-        finalChoices.Add(GrammarEngine.ClickTargetGrammar)
-        finalChoices.Add(GrammarEngine.TargetTargetGrammar)
-        finalChoices.Add(GrammarEngine.SayEmote)
-        finalChoices.Add(GrammarEngine.ChooseOptionGrammar(4))
-
-        Dim endTurn As New GrammarBuilder
-        endTurn.Append(New SemanticResultKey("action", "end"))
-        endTurn.Append("turn")
-        finalChoices.Add(endTurn)
-
-        finalChoices.Add(New SemanticResultKey("action", "click"))
-        finalChoices.Add(New SemanticResultKey("action", "cancel"))
+        Dim gg = GrammarEngine.BuildGameGrammar
 
         Try
-            Return New Grammar(New GrammarBuilder(finalChoices))
+            Return New Grammar(gg)
         Catch ex As Exception
             writeLog("Exception when building grammar: " & ex.Message)
             Return New Grammar(New GrammarBuilder("GRAMMAR ERROR"))
@@ -362,23 +341,23 @@ Public Class hdtVoice
         If Debugger.IsAttached Then 'debug only commands
             If e.Result.Text = "debug show cards" Then
                 For i = 1 To handCards.Count
-                    moveCursorToEntity(handCards.Item(i - 1).Id)
+                    moveCursorToEntity("C" & handCards.Item(i - 1).Id)
                     Sleep(500)
                 Next
             End If
             If e.Result.Text = "debug show friendlies" Then
                 For i = 1 To boardFriendly.Count
-                    moveCursorToEntity(boardFriendly.Item(i - 1).Id)
+                    moveCursorToEntity("F" & boardFriendly.Item(i - 1).Id)
                     Sleep(500)
                 Next
-                moveCursorToEntity(PlayerEntity.Id)
+                moveCursorToEntity("E" & PlayerEntity.Id)
             End If
             If e.Result.Text = "debug show enemies" Then
                 For i = 1 To boardOpposing.Count
-                    moveCursorToEntity(boardOpposing.Item(i - 1).Id)
+                    moveCursorToEntity("O" & boardOpposing.Item(i - 1).Id)
                     Sleep(500)
                 Next
-                moveCursorToEntity(OpponentEntity.Id)
+                moveCursorToEntity("E" & OpponentEntity.Id)
             End If
         End If
 
@@ -448,8 +427,8 @@ Public Class hdtVoice
             opponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
             writeLog("Updated opponent ID to {0}", opponentID)
         End If
-
-        GrammarEngine.InitializeGame()
+        GrammarEngine.StartNewGame()
+        updateRecognizer()
     End Sub ' Runs when a new game is started
     Public Sub onMulligan(Optional c As Card = Nothing)
         mulliganDone = True
@@ -731,7 +710,7 @@ Public Class hdtVoice
         If handCards.Count = 0 Then Exit Sub
 
         Dim myCard = e.Result.Semantics("card").Value
-        Dim cardType = handCards.First(Function(x) x.Id = myCard).Card.Type
+        Dim cardType = GrammarEngine.GetEntityFromSemantic(myCard).Card.Type
 
         If e.Result.Semantics.ContainsKey("friendly") Then 'Play card to friendly target
             Dim destTarget = e.Result.Semantics("friendly").Value
@@ -763,15 +742,10 @@ Public Class hdtVoice
     End Sub
     Private Sub doMulligan(e As SpeechRecognizedEventArgs)
         If e.Result.Semantics.ContainsKey("card") Then
-            Dim targetID = e.Result.Semantics("card").Value
-            Dim targetNum = Entities.First(Function(x) x.Id = targetID).GetTag(GAME_TAG.ZONE_POSITION)
-            If Core.Game.OpponentHasCoin Then
-                moveCursorToOption(targetNum, 3)
-                sendLeftClick()
-            Else
-                moveCursorToOption(targetNum, 4)
-                sendLeftClick()
-            End If
+            Dim semanticValue = e.Result.Semantics("card").Value
+            Dim targetNum = GrammarEngine.GetEntityFromSemantic(semanticValue).GetTag(GAME_TAG.ZONE_POSITION)
+            moveCursorToMulligan(targetNum)
+            sendLeftClick()
         Else
             moveCursor(50, 80)
             sendLeftClick()
@@ -819,20 +793,16 @@ Public Class hdtVoice
         mouse_event(MOUSE_LEFTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0)
         Sleep(100)
     End Sub
-    Public Sub dragTargetToTarget(startEntity As Integer, endEntity As String, Optional endXOffset As Integer = 0)
+    Public Sub dragTargetToTarget(startEntity As String, endEntity As String, Optional endXOffset As Integer = 0)
         moveCursorToEntity(startEntity)
         startDrag()
         moveCursorToEntity(endEntity, endXOffset)
         endDrag()
     End Sub
-    Public Sub moveCursorToEntity(EntityID As Integer, Optional xOffset As Integer = 0)
-        Dim targetEntity As Entity
+    Public Sub moveCursorToEntity(SemanticValue As String, Optional xOffset As Integer = 0)
+        Dim targetEntity As Entity = GrammarEngine.GetEntityFromSemantic(SemanticValue)
 
-        Try 'Try and find the entity in the game
-            targetEntity = Entities.First(Function(x) x.Id = EntityID)
-        Catch ex As Exception
-            Return
-        End Try
+        If IsNothing(targetEntity) Then Exit Sub
 
         'First, check if the entity is a card in our hand
         If targetEntity.IsInHand And targetEntity.GetTag(GAME_TAG.CONTROLLER) = playerID Then
@@ -866,7 +836,7 @@ Public Class hdtVoice
             Dim minionX = minionNum * 10
 
             Dim minX = 50 - (totalWidth / 2) + minionX - 5 + xOffset
-            moveCursor(minX, 40)
+            moveCursor(minX, 38)
             Return
 
         End If
@@ -883,6 +853,22 @@ Public Class hdtVoice
         End If
 
         Return 'failed to locate entity on the board
+
+    End Sub
+    Public Sub moveCursorToMulligan(cardNum As Integer)
+        If Core.Game.OpponentHasCoin Then
+            Dim optionSize As Integer = 17.5
+            Dim optionsWidth As Integer = 3 * optionSize
+            Dim myOption As Double = (cardNum * optionSize) - (optionSize / 2)
+            Dim optionStart As Double = 50 - (optionsWidth / 2)
+            moveCursor(optionStart + myOption, 50)
+        Else
+            Dim optionSize As Integer = 17.5
+            Dim optionsWidth As Integer = 4 * optionSize
+            Dim myOption As Double = (cardNum * optionSize) - (optionSize / 2)
+            Dim optionStart As Double = 50 - (optionsWidth / 2)
+            moveCursor(optionStart + myOption, 50)
+        End If
 
     End Sub
     Public Sub moveCursorToOption(optionNum As Integer, totalOptions As Integer)

@@ -61,6 +61,24 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to card {0}.
+        '''</summary>
+        Friend ReadOnly Property cardGrammar() As String
+            Get
+                Return ResourceManager.GetString("cardGrammar", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to minion {0}.
+        '''</summary>
+        Friend ReadOnly Property minionGrammar() As String
+            Get
+                Return ResourceManager.GetString("minionGrammar", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized resource of type System.IO.UnmanagedMemoryStream similar to System.IO.MemoryStream.
         '''</summary>
         Friend ReadOnly Property sound() As System.IO.UnmanagedMemoryStream
