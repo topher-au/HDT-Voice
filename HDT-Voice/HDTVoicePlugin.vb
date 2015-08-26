@@ -2,7 +2,7 @@
 Imports System.Windows.Controls
 Imports MahApps.Metro
 Imports Hearthstone_Deck_Tracker.Plugins
-Public Class hdtPlugin
+Public Class HDTVoicePlugin
     Implements IPlugin
 
     Public ReadOnly Property Author As String Implements IPlugin.Author
@@ -51,7 +51,7 @@ Public Class hdtPlugin
     End Sub
 
     Public Sub OnLoad() Implements IPlugin.OnLoad
-        Dim voicePlugin As New hdtVoice
+        Dim voicePlugin As New HDTVoice
         voicePlugin.Load()
     End Sub
 

@@ -11,84 +11,82 @@ Imports Hearthstone_Deck_Tracker.Enums
 Imports Hearthstone_Deck_Tracker.Hearthstone
 Imports Hearthstone_Deck_Tracker.Hearthstone.Entities
 
-Imports HDTVoice.GrammarEngine
-
-Public Class hdtVoice
+Public Class HDTVoice
     ' Windows API Declarations
-    Public Declare Function FindWindow Lib "user32" Alias "FindWindowA" (ByVal lpClassName As String, ByVal lpWindowName As String) As IntPtr
-    Public Declare Function GetWindowRect Lib "user32" Alias "GetWindowRect" (ByVal hwnd As IntPtr, ByRef lpRect As RECT) As Integer
     Public Declare Function GetForegroundWindow Lib "user32" () As System.IntPtr
     Public Declare Auto Function GetWindowText Lib "user32" (ByVal hWnd As System.IntPtr, ByVal lpString As System.Text.StringBuilder, ByVal cch As Integer) As Integer
-    Public Declare Sub mouse_event Lib "user32" (ByVal dwFlags As Integer, ByVal dx As Integer, ByVal dy As Integer, ByVal cButtons As Integer, ByVal dwExtraInfo As IntPtr)
     Declare Function GetAsyncKeyState Lib "user32" (ByVal vkey As Integer) As Short
 
-    Const MOUSE_LEFTDOWN As UInteger = &H2
-    Const MOUSE_LEFTUP As UInteger = &H4
-    Const MOUSE_RIGHTDOWN As UInteger = &H8
-    Const MOUSE_RIGHTUP As UInteger = &H10
-    Structure RECT
-        Public Left As Integer
-        Public Top As Integer
-        Public Right As Integer
-        Public Bottom As Integer
-    End Structure
     ' Speech recognition objects
-    Public WithEvents hsRecog As SpeechRecognitionEngine
-    Public WithEvents hotkeyWorker As New BackgroundWorker
+    Public WithEvents recogVoice As SpeechRecognitionEngine
+    Public WithEvents workerHotkey As New BackgroundWorker
+    Public sreListen As Boolean                             ' Should we be listening?
+    Public boolUpdating As Boolean                          ' True when SRE update in progress, FALSE otherwise
 
     ' Action processor list and worker
-    Public actionList As New List(Of SpeechRecognizedEventArgs)
-    Public WithEvents actionWorker As New BackgroundWorker
+    Public listActions As New List(Of SpeechRecognizedEventArgs)
+    Public WithEvents workerActions As New BackgroundWorker
 
-    Public voiceLog As IO.StreamWriter
-    Public lastCommand As New String("none")
 
-    Public WithEvents timerReset As New Timer
+    'HDT-Voice data objects
+    Public swDebugLog As IO.StreamWriter                    ' Debug log writer
+    Public strLastCommand As New String("none")             ' Last command executed
+    Public WithEvents timerReset As New Timer               ' Used to reset status text
 
     'Overlay elements
-    Public overlayCanvas As Canvas = Core.OverlayCanvas 'the main overlay object
-    Public hdtStatus As HearthstoneTextBlock 'status text
+    Public canvasOverlay As Canvas = Core.OverlayCanvas     ' The main overlay object
+    Public textStatus As HearthstoneTextBlock               ' Status text block
 
-    Public sreListen As Boolean ' Should we be listening?
 
-    Public handCards, boardOpposing, boardFriendly As New List(Of Entity)
-    Public playerID As Integer = 0
-    Public opponentID As Integer = 0
-    Public mulliganDone As Boolean
-    Public updateInProgress As Boolean
-    Public GrammarEngine As New HDTGrammarEngine
+    Public intPlayerID As Integer = 0
+    Public intOpponentID As Integer = 0
+
+    Public Shared GrammarEngine As New GrammarEngine
+    Public Mouse As New Mouse
+
     'Properties
     Private ReadOnly Property Entities As Entity()
         Get
             ' Clone entities from game and return as array
-            Dim EntArray = Helper.DeepClone(Core.Game.Entities).Values.ToArray
-            Return EntArray
+            Try
+                Dim EntArray = Helper.DeepClone(Core.Game.Entities).Values.ToArray
+                Return EntArray
+            Catch ex As Exception
+                Return Nothing
+            End Try
+
         End Get
-    End Property ' The list of entities for the current game
+    End Property          ' The list of entities for the current game
     Private ReadOnly Property PlayerEntity As Entity
         Get
             Return Entities.FirstOrDefault(Function(x) x.IsPlayer())
         End Get
-    End Property ' The player's entity
+    End Property        ' The player's entity
     Private ReadOnly Property OpponentEntity As Entity
         Get
             ' Return the Entity representing the player
             Return Entities.FirstOrDefault(Function(x) x.IsOpponent())
         End Get
-    End Property ' The opponent entity
+    End Property      ' The opponent entity
 
     'Main functions
     Public Sub Load()
-        'Start loading HDT-Voice
+        ' Run when the plugin is initialized by HDT
 
-        'Write basic system information to logfile
+        ' Write basic system information to logfile
 
-        writeLog("HDT-Voice {0}.{1} | {2}", {My.Application.Info.Version.Major, My.Application.Info.Version.Minor, My.Computer.Info.OSFullName})
-        writeLog("--------------")
-        writeLog("Current screen resolution: {0}x{1}", {Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height})
+        writeLog("HDT-Voice {0}.{1} ({2}) | {3}x{4}", My.Application.Info.Version.Major, My.Application.Info.Version.Minor, My.Computer.Info.OSFullName, Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height)
         writeLog("Initializing speech recognition object")
 
-        'Attempt to initialize speech recognition
+        ' Initialize output displays
+        textStatus = New HearthstoneTextBlock
+        textStatus.Text = "HDT-Voice: Loading, please wait..."
+        textStatus.FontSize = 16
+        Canvas.SetTop(textStatus, 22)
+        Canvas.SetLeft(textStatus, 4)
+        canvasOverlay.Children.Add(textStatus)
+
+        ' Attempt to initialize speech recognition
         Try
 
             Dim rec As IReadOnlyCollection(Of RecognizerInfo) = SpeechRecognitionEngine.InstalledRecognizers
@@ -98,82 +96,66 @@ Public Class hdtVoice
                     writeLog(e.Culture.Name)
                 Next
                 writeLog("Initializing recognizer for: {0}", rec.First.Culture.Name)
-                hsRecog = New SpeechRecognitionEngine(rec.First.Culture)
+                recogVoice = New SpeechRecognitionEngine(rec.First.Culture)
             Else
                 writeLog("No speech recognizer found. Attempting to start engine anyway.")
-                hsRecog = New SpeechRecognitionEngine()
+                recogVoice = New SpeechRecognitionEngine()
             End If
 
-            hsRecog.SetInputToDefaultAudioDevice()
-            hsRecog.BabbleTimeout = New TimeSpan(0, 0, 3)
-            hsRecog.InitialSilenceTimeout = New TimeSpan(0, 0, 3)
-            hsRecog.EndSilenceTimeout = New TimeSpan(0, 0, 0, 0, 500)
-            hsRecog.EndSilenceTimeoutAmbiguous = New TimeSpan(0, 0, 0, 0, 500)
+            recogVoice.SetInputToDefaultAudioDevice()
+            recogVoice.BabbleTimeout = New TimeSpan(0, 0, 3)
+            recogVoice.InitialSilenceTimeout = New TimeSpan(0, 0, 3)
+            recogVoice.EndSilenceTimeout = New TimeSpan(0, 0, 0, 0, 500)
+            recogVoice.EndSilenceTimeoutAmbiguous = New TimeSpan(0, 0, 0, 0, 500)
             writeLog("Successfuly started speech recognition")
         Catch ex As Exception
             writeLog("Error initializing speech recognition: {0}", ex.Message)
             MsgBox("An error occurred initializing speech recognition: " & vbNewLine & ex.Message, vbOKOnly + vbCritical, "HDT-Voice")
         End Try
 
-
-        ' Initialize output displays
-        hdtStatus = New HearthstoneTextBlock
-        hdtStatus.Text = "HDT-Voice: Loading, please wait..."
-        hdtStatus.FontSize = 16
-        Canvas.SetTop(hdtStatus, 22)
-        Canvas.SetLeft(hdtStatus, 4)
-        overlayCanvas.Children.Add(hdtStatus)
-
-        writeLog("Attaching event handlers...")
         'Add event handlers
         GameEvents.OnGameStart.Add(New Action(AddressOf onNewGame))
-        GameEvents.OnPlayerMulligan.Add(New Action(Of Card)(AddressOf onMulligan))
 
         'Add handlers to reload grammar when needed
         GameEvents.OnGameStart.Add(New Action(AddressOf updateRecognizer))
         GameEvents.OnTurnStart.Add(New Action(Of ActivePlayer)(AddressOf updateRecognizer))
 
         GameEvents.OnInMenu.Add(New Action(AddressOf updateRecognizer))
-
-        'GameEvents.OnPlayerDeckDiscard.Add(New Action(Of Card)(AddressOf updateRecognizer))
         GameEvents.OnPlayerDraw.Add(New Action(Of Card)(AddressOf updateRecognizer))
-        'GameEvents.OnPlayerFatigue.Add(New Action(Of Integer)(AddressOf updateRecognizer))
         GameEvents.OnPlayerGet.Add(New Action(Of Card)(AddressOf updateRecognizer))
         GameEvents.OnPlayerHandDiscard.Add(New Action(Of Card)(AddressOf updateRecognizer))
-        'GameEvents.OnPlayerHeroPower.Add(New Action(AddressOf updateRecognizer))
+        GameEvents.OnPlayerHeroPower.Add(New Action(AddressOf updateRecognizer))
         GameEvents.OnPlayerPlay.Add(New Action(Of Card)(AddressOf updateRecognizer))
-        'GameEvents.OnPlayerPlayToDeck.Add(New Action(Of Card)(AddressOf updateRecognizer))
         GameEvents.OnPlayerPlayToHand.Add(New Action(Of Card)(AddressOf updateRecognizer))
-
         GameEvents.OnOpponentPlay.Add(New Action(Of Card)(AddressOf updateRecognizer))
-        'GameEvents.OnOpponentDraw.Add(New Action(AddressOf updateRecognizer))
-        'GameEvents.OnOpponentHeroPower.Add(New Action(AddressOf updateRecognizer))
 
         'Handlers for plugin settings and overlay size
         AddHandler My.Settings.PropertyChanged, AddressOf updateOverlay
         AddHandler Core.OverlayCanvas.SizeChanged, AddressOf updateOverlay
 
-        timerReset.Interval = 3500
+        timerReset.Interval = 2500
         timerReset.Enabled = True
 
-        hotkeyWorker.RunWorkerAsync() 'Start listening for hotkey
+        'Load default grammar and start recognition
+        recogVoice.LoadGrammar(New Grammar(New GrammarBuilder("default")))
+        recogVoice.RecognizeAsync(RecognizeMode.Multiple)
 
+        workerHotkey.RunWorkerAsync()       ' Start listening for hotkey
+        workerActions.RunWorkerAsync()      ' Start action processor
+
+        ' Start listening if the option is enabled
         If My.Settings.autoListen And Not My.Settings.toggleOrPTT Then sreListen = True
 
-        hsRecog.LoadGrammar(New Grammar(New GrammarBuilder("default")))
-        hsRecog.RecognizeAsync(RecognizeMode.Multiple)
-
-        actionWorker.RunWorkerAsync()
     End Sub ' Run when the plugin is first initialized
     Public Function BuildGrammar() As Grammar
 
         If Core.Game.IsInMenu Then
             writeLog("Menu grammar active")
-            Return New Grammar(GrammarEngine.MenuGrammar)
+            Return New Grammar(GrammarEngine.BuildMenuGrammar)
         End If
 
         ' if the player or opponent entity is unknown, try initiate a new game
-        If playerID = 0 Or opponentID = 0 Then
+        If intPlayerID = 0 Or intOpponentID = 0 Then
             onNewGame()
         End If
 
@@ -181,15 +163,15 @@ Public Class hdtVoice
         If Not Core.Game.IsMulliganDone Then
             writeLog("Building mulligan Grammar...")
 
-            Dim mg = GrammarEngine.MulliganGrammar
+            Dim mg = GrammarEngine.BuildMulliganGrammar
             Return New Grammar(mg)
         End If
 
 
-        Dim gg = GrammarEngine.BuildGameGrammar
+        Dim grammarGame = GrammarEngine.GameGrammar
 
         Try
-            Return New Grammar(gg)
+            Return New Grammar(grammarGame)
         Catch ex As Exception
             writeLog("Exception when building grammar: " & ex.Message)
             Return New Grammar(New GrammarBuilder("GRAMMAR ERROR"))
@@ -198,52 +180,33 @@ Public Class hdtVoice
         Return Nothing
 
     End Function 'Builds and returns grammar for the speech recognition engine
-    Public Sub RefreshGameData()
+    Public Sub onNewGame()
+        writeLog("New Game detected")
+        ' Reset controller IDs
+        intPlayerID = Nothing
+        intOpponentID = Nothing
 
-        'build list of cards in hand
-        handCards.Clear()
+        ' Update player and opponent entities
+        If Not IsNothing(PlayerEntity) Then
+            intPlayerID = PlayerEntity.GetTag(GAME_TAG.CONTROLLER)
+            writeLog("Updated player ID to {0}", intPlayerID)
+        End If
 
-        For Each e In Entities
-            If e.IsInHand And e.GetTag(GAME_TAG.CONTROLLER) = playerID Then
-                handCards.Add(e)
-            End If
-        Next
+        If Not IsNothing(OpponentEntity) Then
+            intOpponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
+            writeLog("Updated opponent ID to {0}", intOpponentID)
+        End If
 
-        ' sort cards by position in hand
-        handCards.Sort(Function(e1 As Entity, e2 As Entity)
-                           Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
-                       End Function)
 
-        ' build list of minions on board
-        boardFriendly.Clear()
-        boardOpposing.Clear()
-
-        For Each e In Entities
-            If e.IsInPlay And e.IsMinion Then
-                If e.IsControlledBy(playerID) Then
-                    boardFriendly.Add(e)
-                ElseIf e.IsControlledBy(opponentID) Then
-                    boardOpposing.Add(e)
-                End If
-            End If
-        Next
-
-        ' sort by position on board
-        boardFriendly.Sort(Function(e1 As Entity, e2 As Entity)
-                               Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
-                           End Function)
-
-        boardOpposing.Sort(Function(e1 As Entity, e2 As Entity)
-                               Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
-                           End Function)
-    End Sub 'Rebuilds data for cards in hand and on board
-
+        GrammarEngine.StartNewGame()    ' Initialize GrammarEngine
+        updateRecognizer()              ' Update recognizer
+    End Sub ' Runs when a new game is started
 
     'Speech recognition
     Public Sub updateRecognizer(Optional e = Nothing)
-        hsRecog.RequestRecognizerUpdate()
+        recogVoice.RequestRecognizerUpdate()
     End Sub ' Request the SpeechRecognitionEngine update asynchronously
-    Public Sub onSpeechRecognized(sender As Object, e As SpeechRecognizedEventArgs) Handles hsRecog.SpeechRecognized
+    Public Sub onSpeechRecognized(sender As Object, e As SpeechRecognizedEventArgs) Handles recogVoice.SpeechRecognized
         If Not Core.Game.IsRunning Then
             Return
         End If
@@ -268,22 +231,22 @@ Public Class hdtVoice
                 My.Computer.Audio.Play(My.Resources.sound, AudioPlayMode.Background)
 
             ' Add command to action list for processing
-            actionList.Add(e)
+            listActions.Add(e)
         End If
 
     End Sub ' Handles processing recognized speech input
-    Public Sub onRecognizerUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles hsRecog.RecognizerUpdateReached
+    Public Sub onRecognizerUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles recogVoice.RecognizerUpdateReached
         If Not Core.Game.IsRunning Then Exit Sub ' do nothing if the game is not running
-        updateInProgress = True
-        hsRecog.UnloadAllGrammars()
-        hsRecog.LoadGrammar(BuildGrammar)
-        updateInProgress = False
+        boolUpdating = True
+        recogVoice.UnloadAllGrammars()
+        recogVoice.LoadGrammar(BuildGrammar)
+        boolUpdating = False
     End Sub ' Handles updating the grammar between commands
-    Public Sub onSpeechRecognitionRejected() Handles hsRecog.SpeechRecognitionRejected
+    Public Sub onSpeechRecognitionRejected() Handles recogVoice.SpeechRecognitionRejected
         ' If recognition fails, refresh Grammar
         updateRecognizer()
     End Sub
-    Public Sub hotkeyWorker_DoWork() Handles hotkeyWorker.DoWork
+    Public Sub hotkeyWorker_DoWork() Handles workerHotkey.DoWork
 
         Do
             Dim toggleHotkey = Keys.F12
@@ -295,12 +258,12 @@ Public Class hdtVoice
                     sreListen = True
                     updateStatusText("Listening...")
                     Do While hotkeyState <> 0
-                        Sleep(1)
+                        Sleep(5)
                         hotkeyState = GetAsyncKeyState(pttHotkey)
                     Loop
                     updateStatusText("Processing...")
-                    Do While hsRecog.AudioState = AudioState.Speech
-                        Sleep(1)
+                    Do While recogVoice.AudioState = AudioState.Speech
+                        Sleep(5)
                     Loop
                     Sleep(500)
                     sreListen = False
@@ -321,164 +284,115 @@ Public Class hdtVoice
     End Sub ' Listens for hotkey and toggles/enables PTT
 
     'Action processor
-    Public Sub actionWorker_DoWork() Handles actionWorker.DoWork
+    Public Sub actionWorker_DoWork() Handles workerActions.DoWork
         Do
-            Do While updateInProgress
-                Sleep(1)
+            Do While boolUpdating
+                Sleep(10)            ' Wait if recognizer is updating
             Loop
-            RefreshGameData()
-            If actionList.Count > 0 Then
-                writeLog("Processing action from action list: " & actionList.Item(0).Result.Text & " (remaining actions: " & actionList.Count.ToString & ")")
-                ProcessAction(actionList.Item(0))
-                actionList.Remove(actionList.Item(0))
+            If listActions.Count > 0 Then
+                Dim currentAction As String = listActions.Item(0).Result.Text
+                writeLog("Processing action: ""{0}""", currentAction.ToUpper)
+                ProcessAction(listActions.Item(0))       ' Process action
+                listActions.Remove(listActions.Item(0))   ' Remove from list
+                Sleep(100)
+                updateRecognizer()                      ' Update recognizer
+                Sleep(500)
             End If
-            Sleep(100)
+            Sleep(50)
         Loop
-    End Sub ' A background loop that continuously processes the actions in the action list
+    End Sub ' A background worker that loops, continuously processing any actions in the action list
     Public Sub ProcessAction(e As SpeechRecognizedEventArgs)
-        'start command processing
+        ' First, check for debugger only commands
 
-        If Debugger.IsAttached Then 'debug only commands
-            If e.Result.Text = "debug show cards" Then
-                For i = 1 To handCards.Count
-                    moveCursorToEntity("C" & handCards.Item(i - 1).Id)
-                    Sleep(500)
-                Next
-            End If
-            If e.Result.Text = "debug show friendlies" Then
-                For i = 1 To boardFriendly.Count
-                    moveCursorToEntity("F" & boardFriendly.Item(i - 1).Id)
-                    Sleep(500)
-                Next
-                moveCursorToEntity("E" & PlayerEntity.Id)
-            End If
-            If e.Result.Text = "debug show enemies" Then
-                For i = 1 To boardOpposing.Count
-                    moveCursorToEntity("O" & boardOpposing.Item(i - 1).Id)
-                    Sleep(500)
-                Next
-                moveCursorToEntity("E" & OpponentEntity.Id)
-            End If
-        End If
-
-        'do menu processing
+        ' Check if the action is a menu action, and if we're in the menu
         If e.Result.Semantics.ContainsKey("menu") And Core.Game.IsInMenu Then
             doMenu(e)
         End If
 
-        'do game processing
+        ' Check if the action is a game action and invoke the appropriate subroutine to handle it
         If e.Result.Semantics.ContainsKey("action") Then
             Select Case e.Result.Semantics("action").Value
-                Case "target" 'move cursor to target
-                    doTarget(e)
-
-                Case "click" 'send a click
-                    doClick(e)
-
-                Case "mulligan" 'mulligan a card or confirm
+                Case "mulligan"     ' Handle mulligan stage commands
                     doMulligan(e)
 
-                Case "play" 'play a card
-                    doPlay(e)
-
-                Case "attack" 'Attack with minion
-                    doAttack(e)
-
-                Case "hero" ' Use hero power
+                Case "hero"         ' Use hero power
                     doHero(e)
 
-                Case "say" ' Do an emote
+                Case "play"         ' Play a card from hand
+                    doPlay(e)
+
+                Case "attack"       ' Attack with a minion
+                    doAttack(e)
+
+                Case "click"        ' Send a click to an entity
+                    doClick(e)
+
+                Case "target"       ' Hover the cursor over a target
+                    doTarget(e)
+
+                Case "say"          ' Do an emote
                     doSay(e)
 
-                Case "choose" 'Choose an option of x
+                Case "choose"       ' Choose an option (x of y)
                     doChoose(e)
 
-                Case "cancel" 'simply right click
-                    sendRightClick()
+                Case "cancel"       ' Send right click
+                    Mouse.SendClick(Mouse.Buttons.Right)
 
-                Case "end"
-                    moveCursor(91, 46) 'end turn button
-                    sendLeftClick()
-
+                Case "end"          ' Click End Turn
+                    Mouse.MoveTo(91, 46)
+                    Mouse.SendClick(Mouse.Buttons.Left)
             End Select
-
         End If
 
-        lastCommand = e.Result.Text 'set last command executed
-        updateRecognizer()
-        Sleep(100)
-
-    End Sub
-
-    'Game event handlers
-    Public Sub onNewGame()
-        writeLog("New Game detected")
-        ' Initialize controller IDs
-        playerID = Nothing
-        opponentID = Nothing
-        mulliganDone = False
-
-        If Not IsNothing(PlayerEntity) Then
-            playerID = PlayerEntity.GetTag(GAME_TAG.CONTROLLER)
-            writeLog("Updated player ID to {0}", playerID)
-        End If
-
-        If Not IsNothing(OpponentEntity) Then
-            opponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
-            writeLog("Updated opponent ID to {0}", opponentID)
-        End If
-        GrammarEngine.StartNewGame()
-        updateRecognizer()
-    End Sub ' Runs when a new game is started
-    Public Sub onMulligan(Optional c As Card = Nothing)
-        mulliganDone = True
+        strLastCommand = e.Result.Text ' Set last command executed
     End Sub
 
     'Voice command handlers
     Private Sub doChoose(e As SpeechRecognizedEventArgs)
         Dim optNum = e.Result.Semantics("option").Value
         Dim optmax = e.Result.Semantics("max").Value
-        moveCursorToOption(optNum, optmax)
+        Mouse.MoveToOption(optNum, optmax)
     End Sub 'handles selecting an option
     Private Sub doSay(e As SpeechRecognizedEventArgs)
         Dim emote = e.Result.Semantics("emote").Value
         Select Case emote
             Case "thanks"
-                moveCursor(50, 75)
-                sendRightClick()
+                Mouse.MoveTo(50, 75)
+                Mouse.SendClick(Mouse.Buttons.Right)
                 Sleep(200)
-                moveCursor(40, 64)
-                sendLeftClick()
+                Mouse.MoveTo(40, 64)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "well played"
-                moveCursor(50, 75)
-                sendRightClick()
+                Mouse.MoveTo(50, 75)
+                Mouse.SendClick(Mouse.Buttons.Right)
                 Sleep(200)
-                moveCursor(40, 72)
-                sendLeftClick()
+                Mouse.MoveTo(40, 72)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "greetings"
-                moveCursor(50, 75)
-                sendRightClick()
+                Mouse.MoveTo(50, 75)
+                Mouse.SendClick(Mouse.Buttons.Right)
                 Sleep(200)
-                moveCursor(40, 80)
-                sendLeftClick()
+                Mouse.MoveTo(40, 80)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "sorry"
-                moveCursor(50, 75)
-                sendRightClick()
+                Mouse.MoveTo(50, 75)
+                Mouse.SendClick(Mouse.Buttons.Right)
                 Sleep(200)
-                moveCursor(60, 64)
-                sendLeftClick()
+                Mouse.MoveTo(60, 64)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "oops"
-                moveCursor(50, 75)
-                sendRightClick()
+                Mouse.MoveTo(50, 75)
+                Mouse.SendClick(Mouse.Buttons.Right)
                 Sleep(200)
-                moveCursor(60, 72)
-                sendLeftClick()
+                Mouse.MoveTo(60, 72)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "threaten"
-                moveCursor(50, 75)
-                sendRightClick()
+                Mouse.MoveTo(50, 75)
+                Mouse.SendClick(Mouse.Buttons.Right)
                 Sleep(200)
-                moveCursor(60, 80)
-                sendLeftClick()
+                Mouse.MoveTo(60, 80)
+                Mouse.SendClick(Mouse.Buttons.Left)
         End Select
     End Sub 'handles emotes
     Private Sub doClick(e As SpeechRecognizedEventArgs)
@@ -486,170 +400,169 @@ Public Class hdtVoice
             Dim x, y
             If e.Result.Semantics("herotarget").Value = "friendly" Then y = 80 Else y = 20
             If e.Result.Semantics("heropower").Value = "hero" Then x = 50 Else x = 60
-            moveCursor(x, y)
+            Mouse.MoveTo(x, y)
         End If
         If e.Result.Semantics.ContainsKey("card") Then
             Dim targetName = e.Result.Semantics("card").Value
-            moveCursorToEntity(targetName)
+            Mouse.MoveToEntity(targetName)
         End If
         If e.Result.Semantics.ContainsKey("friendly") Then
             Dim targetName = e.Result.Semantics("friendly").Value
-            moveCursorToEntity(targetName)
+            Mouse.MoveToEntity(targetName)
         End If
         If e.Result.Semantics.ContainsKey("opposing") Then
             Dim targetName = e.Result.Semantics("opposing").Value
-            moveCursorToEntity(targetName)
+            Mouse.MoveToEntity(targetName)
         End If
-        sendLeftClick()
-        Sleep(100)
+        Mouse.SendClick(Mouse.Buttons.Left)
     End Sub 'handle clicking mouse
     Private Sub doMenu(e As SpeechRecognizedEventArgs)
         Select Case e.Result.Semantics("menu").Value
             Case "play"
-                moveCursor(50, 31)
-                sendLeftClick()
+                Mouse.MoveTo(50, 31)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "casual mode"
-                moveCursor(75, 20)
-                sendLeftClick()
+                Mouse.MoveTo(75, 20)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "ranked mode"
-                moveCursor(85, 20)
-                sendLeftClick()
+                Mouse.MoveTo(85, 20)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "basic decks"
-                moveCursor(23, 90)
-                sendLeftClick()
+                Mouse.MoveTo(23, 90)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "custom decks"
-                moveCursor(45, 90)
-                sendLeftClick()
+                Mouse.MoveTo(45, 90)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "start game"
-                moveCursor(80, 85)
-                sendLeftClick()
+                Mouse.MoveTo(80, 85)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "solo"
-                moveCursor(50, 38)
-                sendLeftClick()
+                Mouse.MoveTo(50, 38)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "versus mage"
-                moveCursor(82, 12)
-                sendLeftClick()
+                Mouse.MoveTo(82, 12)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "versus hunter"
-                moveCursor(82, 18)
-                sendLeftClick()
+                Mouse.MoveTo(82, 18)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "versus warrior"
-                moveCursor(82, 24)
-                sendLeftClick()
+                Mouse.MoveTo(82, 24)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "versus shaman"
-                moveCursor(82, 30)
-                sendLeftClick()
+                Mouse.MoveTo(82, 30)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "versus druid"
-                moveCursor(82, 36)
-                sendLeftClick()
+                Mouse.MoveTo(82, 36)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "versus priest"
-                moveCursor(82, 42)
-                sendLeftClick()
+                Mouse.MoveTo(82, 42)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "versus rogue"
-                moveCursor(82, 48)
-                sendLeftClick()
+                Mouse.MoveTo(82, 48)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "versus paladin"
-                moveCursor(82, 54)
-                sendLeftClick()
+                Mouse.MoveTo(82, 54)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "versus warlock"
-                moveCursor(82, 60)
-                sendLeftClick()
+                Mouse.MoveTo(82, 60)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
 
             'arena commands
             Case "arena"
-                moveCursor(50, 45)
-                sendLeftClick()
+                Mouse.MoveTo(50, 45)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "buy arena with gold"
-                moveCursor(60, 62)
-                sendLeftClick()
+                Mouse.MoveTo(60, 62)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "cancel arena"
-                moveCursor(50, 75)
-                sendLeftClick()
+                Mouse.MoveTo(50, 75)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "start arena"
-                moveCursor(60, 75)
-                sendLeftClick()
+                Mouse.MoveTo(60, 75)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "hero 1"
-                moveCursor(20, 40)
-                sendLeftClick()
+                Mouse.MoveTo(20, 40)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "hero 2"
-                moveCursor(40, 40)
-                sendLeftClick()
+                Mouse.MoveTo(40, 40)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "hero 3"
-                moveCursor(55, 40)
-                sendLeftClick()
+                Mouse.MoveTo(55, 40)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "card 1"
-                moveCursor(20, 40)
-                sendLeftClick()
+                Mouse.MoveTo(20, 40)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "card 2"
-                moveCursor(40, 40)
-                sendLeftClick()
+                Mouse.MoveTo(40, 40)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "card 3"
-                moveCursor(55, 40)
-                sendLeftClick()
+                Mouse.MoveTo(55, 40)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "confirm"
-                moveCursor(50, 45)
-                sendLeftClick()
+                Mouse.MoveTo(50, 45)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "brawl"
-                moveCursor(50, 52)
-                sendLeftClick()
+                Mouse.MoveTo(50, 52)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "start brawl"
-                moveCursor(65, 85)
-                sendLeftClick()
+                Mouse.MoveTo(65, 85)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
 
             Case "open packs"
-                moveCursor(40, 85)
-                sendLeftClick()
+                Mouse.MoveTo(40, 85)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "open top pack"
-                moveCursor(12, 20)
-                startDrag()
-                moveCursor(59, 49)
-                endDrag()
+                Mouse.MoveTo(12, 20)
+                Mouse.StartDrag()
+                Mouse.MoveTo(59, 49)
+                Mouse.EndDrag()
             Case "open bottom pack"
-                moveCursor(12, 50)
-                startDrag()
-                moveCursor(59, 49)
-                endDrag()
+                Mouse.MoveTo(12, 50)
+                Mouse.StartDrag()
+                Mouse.MoveTo(59, 49)
+                Mouse.EndDrag()
             Case "open card 1"
-                moveCursor(60, 35)
-                sendLeftClick()
+                Mouse.MoveTo(60, 35)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "open card 2"
-                moveCursor(80, 35)
-                sendLeftClick()
+                Mouse.MoveTo(80, 35)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "open card 3"
-                moveCursor(70, 70)
-                sendLeftClick()
+                Mouse.MoveTo(70, 70)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "open card 4"
-                moveCursor(50, 70)
-                sendLeftClick()
+                Mouse.MoveTo(50, 70)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "open card 5"
-                moveCursor(40, 35)
-                sendLeftClick()
+                Mouse.MoveTo(40, 35)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "done"
-                moveCursor(60, 50)
-                sendLeftClick()
+                Mouse.MoveTo(60, 50)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "quest log"
-                moveCursor(21, 87)
-                sendLeftClick()
+                Mouse.MoveTo(21, 87)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "cancel"
-                moveCursor(52, 85)
-                sendLeftClick()
+                Mouse.MoveTo(52, 85)
+                Mouse.SendClick(Mouse.Buttons.Left)
             Case "back"
-                moveCursor(92, 91)
-                sendLeftClick()
+                Mouse.MoveTo(92, 91)
+                Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "deck"
                 Dim deckNum = e.Result.Semantics("deck").Value
@@ -665,49 +578,46 @@ Public Class hdtVoice
                 Dim deckY As Integer
                 deckX = 2 + (deckCol * 16)
                 deckY = 8 + (deckRow * 20)
-                moveCursor(deckX, deckY)
-                sendLeftClick()
+                Mouse.MoveTo(deckX, deckY)
+                Mouse.SendClick(Mouse.Buttons.Left)
         End Select
     End Sub ' handle menu commands
     Private Sub doHero(e As SpeechRecognizedEventArgs)
         If e.Result.Semantics.ContainsKey("friendly") Then
             Dim friendlyID = e.Result.Semantics("friendly").Value
-            moveCursor(62, 76)
-            startDrag()
-            moveCursorToEntity(friendlyID)
-            endDrag()
+            Mouse.MoveTo(62, 76)
+            Mouse.StartDrag()
+            Mouse.MoveToEntity(friendlyID)
+            Mouse.EndDrag()
         ElseIf e.Result.Semantics.ContainsKey("opposing") Then
             Dim opposingID = e.Result.Semantics("opposing").Value
-            moveCursor(62, 76)
-            startDrag()
-            moveCursorToEntity(opposingID)
-            endDrag()
+            Mouse.MoveTo(62, 76)
+            Mouse.StartDrag()
+            Mouse.MoveToEntity(opposingID)
+            Mouse.EndDrag()
         Else
-            moveCursor(62, 76)
-            sendLeftClick()
+            Mouse.MoveTo(62, 76)
+            Mouse.SendClick(Mouse.Buttons.Left)
         End If
-        Sleep(100)
     End Sub 'handle hero powers
     Private Sub doAttack(e As SpeechRecognizedEventArgs)
 
         If e.Result.Semantics.ContainsKey("opposing") Then ' Target is a minion
             Dim myMinion = e.Result.Semantics("friendly").Value
             Dim targetMinion = e.Result.Semantics("opposing").Value
-            moveCursorToEntity(myMinion)
-            startDrag()
-            moveCursorToEntity(targetMinion)
-            endDrag()
+            Mouse.MoveToEntity(myMinion)
+            Mouse.StartDrag()
+            Mouse.MoveToEntity(targetMinion)
+            Mouse.EndDrag()
         Else ' Not a minion, attack face
             Dim myMinion = e.Result.Semantics("friendly").Value
-            moveCursorToEntity(myMinion)
-            startDrag()
-            moveCursor(50, 20)
-            endDrag()
+            Mouse.MoveToEntity(myMinion)
+            Mouse.StartDrag()
+            Mouse.MoveTo(50, 20)
+            Mouse.EndDrag()
         End If
-        Sleep(100)
     End Sub 'handle attacking
     Private Sub doPlay(e As SpeechRecognizedEventArgs)
-        If handCards.Count = 0 Then Exit Sub
 
         Dim myCard = e.Result.Semantics("card").Value
         Dim cardType = GrammarEngine.GetEntityFromSemantic(myCard).Card.Type
@@ -715,40 +625,39 @@ Public Class hdtVoice
         If e.Result.Semantics.ContainsKey("friendly") Then 'Play card to friendly target
             Dim destTarget = e.Result.Semantics("friendly").Value
             If cardType = "Minion" Then 'Card is a minion
-                dragTargetToTarget(myCard, destTarget, -5) 'Play to the left of friendly target
+                Mouse.DragToTarget(myCard, destTarget, -5) 'Play to the left of friendly target
             Else 'Card is a spell
-                dragTargetToTarget(myCard, destTarget) 'Direct drag to target
+                Mouse.DragToTarget(myCard, destTarget) 'Direct drag to target
             End If
 
 
         ElseIf e.Result.Semantics.ContainsKey("opposing") Then 'Play card to opposing target
             Dim targetName = e.Result.Semantics("opposing").Value
-            dragTargetToTarget(myCard, targetName)
+            Mouse.DragToTarget(myCard, targetName)
         Else 'Play card with no target
             If cardType = "Minion" Then
-                moveCursorToEntity(myCard)
-                startDrag()
-                moveCursor(85, 55) 'play to right of board
-                endDrag()
+                Mouse.MoveToEntity(myCard)
+                Mouse.StartDrag()
+                Mouse.MoveTo(85, 55) 'play to right of board
+                Mouse.EndDrag()
             Else
-                moveCursorToEntity(myCard)
-                startDrag()
-                moveCursor(40, 75) 'play to board
-                endDrag()
+                Mouse.MoveToEntity(myCard)
+                Mouse.StartDrag()
+                Mouse.MoveTo(40, 75) 'play to board
+                Mouse.EndDrag()
             End If
 
         End If
-        Sleep(100)
     End Sub
     Private Sub doMulligan(e As SpeechRecognizedEventArgs)
         If e.Result.Semantics.ContainsKey("card") Then
             Dim semanticValue = e.Result.Semantics("card").Value
             Dim targetNum = GrammarEngine.GetEntityFromSemantic(semanticValue).GetTag(GAME_TAG.ZONE_POSITION)
-            moveCursorToMulligan(targetNum)
-            sendLeftClick()
+            Mouse.MoveToMulligan(targetNum)
+            Mouse.SendClick(Mouse.Buttons.Left)
         Else
-            moveCursor(50, 80)
-            sendLeftClick()
+            Mouse.MoveTo(50, 80)
+            Mouse.SendClick(Mouse.Buttons.Left)
         End If
     End Sub 'handle mulligan
     Private Sub doTarget(e As SpeechRecognizedEventArgs)
@@ -756,175 +665,21 @@ Public Class hdtVoice
             Dim x, y
             If e.Result.Semantics("herotarget").Value = "friendly" Then y = 80 Else y = 20
             If e.Result.Semantics("heropower").Value = "hero" Then x = 50 Else x = 60
-            moveCursor(x, y)
+            Mouse.MoveTo(x, y)
         End If
         If e.Result.Semantics.ContainsKey("card") Then 'target card
             Dim targetName = e.Result.Semantics("card").Value
-            moveCursorToEntity(targetName)
+            Mouse.MoveToEntity(targetName)
         End If
         If e.Result.Semantics.ContainsKey("friendly") Then 'target friendly
             Dim targetName = e.Result.Semantics("friendly").Value
-            moveCursorToEntity(targetName)
+            Mouse.MoveToEntity(targetName)
         End If
         If e.Result.Semantics.ContainsKey("opposing") Then 'target opposing
             Dim targetName = e.Result.Semantics("opposing").Value
-            moveCursorToEntity(targetName)
+            Mouse.MoveToEntity(targetName)
         End If
     End Sub 'handle targeting cursor
-
-    'Mouse functions
-    Public Sub sendLeftClick()
-        mouse_event(MOUSE_LEFTDOWN, Cursor.Position.X, Cursor.Position.Y, 0, 0)
-        Sleep(50)
-        mouse_event(MOUSE_LEFTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0)
-        Sleep(100)
-    End Sub
-    Public Sub sendRightClick()
-        mouse_event(MOUSE_RIGHTDOWN, Cursor.Position.X, Cursor.Position.Y, 0, 0)
-        Sleep(50)
-        mouse_event(MOUSE_RIGHTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0)
-        Sleep(100)
-    End Sub
-    Public Sub startDrag()
-        mouse_event(MOUSE_LEFTDOWN, Cursor.Position.X, Cursor.Position.Y, 0, 0)
-        Sleep(100)
-    End Sub
-    Public Sub endDrag()
-        mouse_event(MOUSE_LEFTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0)
-        Sleep(100)
-    End Sub
-    Public Sub dragTargetToTarget(startEntity As String, endEntity As String, Optional endXOffset As Integer = 0)
-        moveCursorToEntity(startEntity)
-        startDrag()
-        moveCursorToEntity(endEntity, endXOffset)
-        endDrag()
-    End Sub
-    Public Sub moveCursorToEntity(SemanticValue As String, Optional xOffset As Integer = 0)
-        Dim targetEntity As Entity = GrammarEngine.GetEntityFromSemantic(SemanticValue)
-
-        If IsNothing(targetEntity) Then Exit Sub
-
-        'First, check if the entity is a card in our hand
-        If targetEntity.IsInHand And targetEntity.GetTag(GAME_TAG.CONTROLLER) = playerID Then
-            Dim cardNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
-            Dim totalCards As Integer = handCards.Count
-            Dim handwidth = If(totalCards < 4, 10 * totalCards, 38)
-
-            Dim x = (((cardNum) / (totalCards)) * handwidth) - (handwidth / 2) - 0.8 + xOffset
-            Dim y = (x * -0.16) ^ 2
-            moveCursor(x + 44, y + 89)
-            Return
-        End If
-
-        'Next, check whether it is a friendly minion
-        If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GAME_TAG.CONTROLLER) = playerID Then
-            Dim minionNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
-            Dim totalMinions As Integer = boardFriendly.Count
-            Dim totalWidth = totalMinions * 10
-            Dim minionX = minionNum * 10
-
-            Dim minX = 50 - (totalWidth / 2) + minionX - 7 + xOffset
-            moveCursor(minX, 55)
-            Return
-        End If
-
-        'Then, check whether it is an opposing minion
-        If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GAME_TAG.CONTROLLER) = opponentID Then
-            Dim minionNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
-            Dim totalMinions As Integer = boardOpposing.Count
-            Dim totalWidth = totalMinions * 10
-            Dim minionX = minionNum * 10
-
-            Dim minX = 50 - (totalWidth / 2) + minionX - 5 + xOffset
-            moveCursor(minX, 38)
-            Return
-
-        End If
-
-        'Finally, check whether it is a hero
-        If targetEntity.IsPlayer Then
-            moveCursor(50, 75)
-            Return
-        End If
-
-        If targetEntity.IsOpponent Then
-            moveCursor(50, 20)
-            Return
-        End If
-
-        Return 'failed to locate entity on the board
-
-    End Sub
-    Public Sub moveCursorToMulligan(cardNum As Integer)
-        If Core.Game.OpponentHasCoin Then
-            Dim optionSize As Integer = 17.5
-            Dim optionsWidth As Integer = 3 * optionSize
-            Dim myOption As Double = (cardNum * optionSize) - (optionSize / 2)
-            Dim optionStart As Double = 50 - (optionsWidth / 2)
-            moveCursor(optionStart + myOption, 50)
-        Else
-            Dim optionSize As Integer = 17.5
-            Dim optionsWidth As Integer = 4 * optionSize
-            Dim myOption As Double = (cardNum * optionSize) - (optionSize / 2)
-            Dim optionStart As Double = 50 - (optionsWidth / 2)
-            moveCursor(optionStart + myOption, 50)
-        End If
-
-    End Sub
-    Public Sub moveCursorToOption(optionNum As Integer, totalOptions As Integer)
-        Dim optionSize As Integer = 20
-        Dim optionsWidth As Integer = totalOptions * optionSize
-        Dim myOption As Integer = (optionNum * optionSize) - (optionSize / 2)
-        Dim optionStart As Integer = 50 - (optionsWidth / 2)
-        moveCursor(optionStart + myOption, 50)
-    End Sub
-    Public Sub moveCursor(xPercent As Integer, yPercent As Integer)
-        'First, find the Hearthstone window and it's size
-        Dim hWndHS As IntPtr = FindWindow(Nothing, "Hearthstone")
-        Dim rectHS As RECT
-        GetWindowRect(hWndHS, rectHS)
-
-        Dim windowWidth = rectHS.Right - rectHS.Left
-        Dim uiHeight = rectHS.Bottom - rectHS.Top
-        Dim uiWidth = ((uiHeight) / 3) * 4 ' A 4:3 square in the center
-
-        Dim xOffset = (windowWidth - uiWidth) / 2 ' The space on the side of the game UI
-
-        Dim endX As Integer = (xPercent / 100) * uiWidth + xOffset + rectHS.Left
-        Dim endY As Integer = (yPercent / 100) * uiHeight + rectHS.Top + 8
-        Dim startY As Integer = Cursor.Position.Y
-        Dim startX As Integer = Cursor.Position.X
-
-        Dim duration = 50
-
-        If My.Settings.smoothCursor Then
-            ' Do smooth cursor movement
-            Dim cursorX As Integer = Cursor.Position.X
-            Dim cursorY As Integer = Cursor.Position.Y
-
-            Dim distX = endX - cursorX
-            Dim distY = endY - cursorY
-
-            Dim distZ As Integer = Math.Sqrt(distX ^ 2 + distY ^ 2) 'a^2+b^2=c^2 - the distance the mouse will move
-
-            Dim durationMod As Double = If(distZ < 500, 1, 0.5)
-
-            duration *= durationMod
-
-            For i = 1 To duration ' Interpolate over duration
-                cursorX = startX + distX * (i / duration)
-                cursorY = startY + distY * (i / duration)
-                Cursor.Position = New Point(cursorX, cursorY)
-                Sleep(1)
-            Next
-
-        Else
-            ' Move cursor immediately to target
-            Cursor.Position = New Point(endX, endY)
-        End If
-
-        Sleep(100)
-    End Sub
 
     'Miscellaneous functions
     Public Function IsHearthstoneActive() As Boolean
@@ -940,27 +695,27 @@ Public Class hdtVoice
     Public Function updateOverlay() As System.Windows.SizeChangedEventHandler
         'Update positioning/visibility of status text
         If My.Settings.showStatusText = False Then
-            hdtStatus.Visibility = System.Windows.Visibility.Hidden
+            textStatus.Visibility = System.Windows.Visibility.Hidden
         Else
-            hdtStatus.Visibility = System.Windows.Visibility.Visible
+            textStatus.Visibility = System.Windows.Visibility.Visible
         End If
         Select Case My.Settings.statusTextPos ' position status text
             Case 0 'Top left
-                Canvas.SetTop(hdtStatus, 32)
-                Canvas.SetLeft(hdtStatus, 8)
-                hdtStatus.TextAlignment = System.Windows.TextAlignment.Left
+                Canvas.SetTop(textStatus, 32)
+                Canvas.SetLeft(textStatus, 8)
+                textStatus.TextAlignment = System.Windows.TextAlignment.Left
             Case 1 'Bottom left
-                Canvas.SetTop(hdtStatus, overlayCanvas.Height - 64)
-                Canvas.SetLeft(hdtStatus, 8)
-                hdtStatus.TextAlignment = System.Windows.TextAlignment.Left
+                Canvas.SetTop(textStatus, canvasOverlay.Height - 64)
+                Canvas.SetLeft(textStatus, 8)
+                textStatus.TextAlignment = System.Windows.TextAlignment.Left
             Case 2 'Top right
-                Canvas.SetTop(hdtStatus, 8)
-                Canvas.SetLeft(hdtStatus, overlayCanvas.Width - hdtStatus.ActualWidth - 8)
-                hdtStatus.TextAlignment = System.Windows.TextAlignment.Right
+                Canvas.SetTop(textStatus, 8)
+                Canvas.SetLeft(textStatus, canvasOverlay.Width - textStatus.ActualWidth - 8)
+                textStatus.TextAlignment = System.Windows.TextAlignment.Right
             Case 3 'Bottom right
-                Canvas.SetTop(hdtStatus, overlayCanvas.Height - 64)
-                Canvas.SetLeft(hdtStatus, overlayCanvas.Width - hdtStatus.ActualWidth - 8)
-                hdtStatus.TextAlignment = System.Windows.TextAlignment.Right
+                Canvas.SetTop(textStatus, canvasOverlay.Height - 64)
+                Canvas.SetLeft(textStatus, canvasOverlay.Width - textStatus.ActualWidth - 8)
+                textStatus.TextAlignment = System.Windows.TextAlignment.Right
         End Select
 
         Return Nothing
@@ -971,18 +726,18 @@ Public Class hdtVoice
             Return
         End If
         Try
-            hdtStatus.Dispatcher.Invoke(Sub()
-                                            Dim newStatus = "HDT-Voice: "
-                                            newStatus &= Status
-                                            If My.Settings.showLast Then
-                                                newStatus &= vbNewLine & "Last executed: " & lastCommand
-                                            End If
-                                            hdtStatus.Text = newStatus
-                                            timerReset.Enabled = False  ' Reset interval
-                                            timerReset.Enabled = True
+            textStatus.Dispatcher.Invoke(Sub()
+                                             Dim newStatus = "HDT-Voice: "
+                                             newStatus &= Status
+                                             If My.Settings.showLast Then
+                                                 newStatus &= vbNewLine & "Last executed: " & strLastCommand
+                                             End If
+                                             textStatus.Text = newStatus
+                                             timerReset.Enabled = False  ' Reset interval
+                                             timerReset.Enabled = True
 
-                                        End Sub)
-            overlayCanvas.UpdateLayout()
+                                         End Sub)
+            canvasOverlay.UpdateLayout()
         Catch ex As Exception
             Return
         End Try
@@ -993,13 +748,13 @@ Public Class hdtVoice
         formatLine = String.Format("HDT-Voice: {0}", formatLine)
         Debug.WriteLine(formatLine)
         If My.Settings.outputDebug Then
-            If IsNothing(voiceLog) Then
-                voiceLog = New IO.StreamWriter("hdtvoicelog.txt")
+            If IsNothing(swDebugLog) Then
+                swDebugLog = New IO.StreamWriter("hdtvoicelog.txt")
             End If
-            voiceLog.WriteLine(formatLine)
-            voiceLog.Flush()
+            swDebugLog.WriteLine(formatLine)
+            swDebugLog.Flush()
         Else
-            voiceLog = Nothing
+            swDebugLog = Nothing
         End If
     End Sub 'Writes information to the debug output and the logfile if necessary
     Public Sub onResetTimer() Handles timerReset.Tick
