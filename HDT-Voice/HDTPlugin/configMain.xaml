@@ -28,7 +28,11 @@
                     <DockPanel Margin="10">
                         <CheckBox Name="checkDebugLog" Content="Enable debug logfile" />
                     </DockPanel>
+                    <DockPanel Margin="20">
+                        <Button Name="buttonUpdate" Content="Check for Updates" Height="48"/>
+                    </DockPanel>
                 </StackPanel>
+                
             </ScrollViewer>
         </GroupBox>
     </Grid>

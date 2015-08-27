@@ -9,6 +9,8 @@ Imports MahApps.Metro.Controls
 Public Class HDTVoicePlugin
     Implements IPlugin
 
+    Public Shared PluginVersion As New Version(0, 7, 3)
+
     Private createdSettings As Boolean = False
     Private configRecog As configRecog
     Private configMain As configMain
@@ -45,7 +47,7 @@ Public Class HDTVoicePlugin
     End Property
     Public ReadOnly Property Version As Version Implements IPlugin.Version
         Get
-            Return New Version(0, 7, 2)
+            Return PluginVersion
         End Get
     End Property
     Public Sub OnButtonPress() Implements IPlugin.OnButtonPress
