@@ -9,6 +9,8 @@ Imports MahApps.Metro.Controls
 Public Class HDTVoicePlugin
     Implements IPlugin
 
+    'Some code is based on code found in HDT Compatibility Window
+
     Public Shared PluginVersion As New Version(0, 7, 4)
 
     Private createdSettings As Boolean = False

@@ -1,6 +1,7 @@
 ﻿Imports Newtonsoft.Json
 Imports System.Net
 Public Class Github
+    'Code is based on code found in HDT Compatibility Window
     Public Function CheckForUpdate(user As String, repo As String, version As Version) As GithubRelease
         Try
             Dim latest As GithubRelease = GetLatestRelease(user, repo)

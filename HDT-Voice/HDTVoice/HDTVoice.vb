@@ -229,8 +229,9 @@ Public Class HDTVoice
     End Sub ' Handles updating the grammar between commands
     Public Sub onSpeechRecognitionRejected() Handles recogVoice.SpeechRecognitionRejected
         ' If recognition fails, refresh Grammar
+
         updateRecognizer()
-        PopupNotification("Command not recognized", 3000)
+
     End Sub
     Public Sub hotkeyWorker_DoWork() Handles workerHotkey.DoWork
         Dim toggleHotkey = Keys.F12

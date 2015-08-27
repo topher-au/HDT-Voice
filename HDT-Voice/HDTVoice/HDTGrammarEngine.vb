@@ -429,6 +429,12 @@ Public Class GrammarEngine
     Private Function TargetTargetGrammar() As GrammarBuilder
         Dim targetChoices As New Choices
 
+        Dim targetCard As New GrammarBuilder
+        targetCard.Append(New SemanticResultKey("action", "target"))
+        targetCard.Append("card")
+        targetCard.Append(myHand)
+        targetChoices.Add(targetCard)
+
         Dim targetFriendly As New GrammarBuilder
         targetFriendly.Append(New SemanticResultKey("action", "target"))
         targetFriendly.Append(friendlyNames)
