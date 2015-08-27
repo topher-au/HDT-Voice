@@ -144,42 +144,8 @@ Public Class HDTVoice
         workerActions.RunWorkerAsync()      ' Start action processor
 
         ' Start listening if the option is enabled
-        If My.Settings.autoListen And Not My.Settings.toggleOrPTT Then sreListen = True
-
+        If My.Settings.boolListenAtStartup And Not My.Settings.boolToggleOrPtt Then sreListen = True
     End Sub ' Run when the plugin is first initialized
-    Public Function BuildGrammar() As Grammar
-
-        If Core.Game.IsInMenu Then
-            writeLog("Menu grammar active")
-            Return New Grammar(GrammarEngine.BuildMenuGrammar)
-        End If
-
-        ' if the player or opponent entity is unknown, try initiate a new game
-        If intPlayerID = 0 Or intOpponentID = 0 Then
-            onNewGame()
-        End If
-
-        ' Check if we're at the mulligan, if so only the mulligan grammar will be returned
-        If Not Core.Game.IsMulliganDone Then
-            writeLog("Building mulligan Grammar...")
-
-            Dim mg = GrammarEngine.BuildMulliganGrammar
-            Return New Grammar(mg)
-        End If
-
-
-        Dim grammarGame = GrammarEngine.GameGrammar
-
-        Try
-            Return New Grammar(grammarGame)
-        Catch ex As Exception
-            writeLog("Exception when building grammar: " & ex.Message)
-            Return New Grammar(New GrammarBuilder("GRAMMAR ERROR"))
-        End Try
-
-        Return Nothing
-
-    End Function 'Builds and returns grammar for the speech recognition engine
     Public Sub onNewGame()
         writeLog("New Game detected")
         ' Reset controller IDs
@@ -218,7 +184,7 @@ Public Class HDTVoice
         End If
 
         'If below preset confidence threshold then exit
-        If e.Result.Confidence < My.Settings.Threshold / 100 Then
+        If e.Result.Confidence < My.Settings.intThreshold / 100 Then
             writeLog("Heard command """ & e.Result.Text & """ but it was below the recognition threshold")
             Return
         End If
@@ -227,7 +193,7 @@ Public Class HDTVoice
             updateStatusText("Heard """ & e.Result.Text & """")
 
             ' Speech was recognized, play audio
-            If My.Settings.playAudio Then _
+            If My.Settings.boolRecognizedAudio Then _
                 My.Computer.Audio.Play(My.Resources.sound, AudioPlayMode.Background)
 
             ' Add command to action list for processing
@@ -239,7 +205,22 @@ Public Class HDTVoice
         If Not Core.Game.IsRunning Then Exit Sub ' do nothing if the game is not running
         boolUpdating = True
         recogVoice.UnloadAllGrammars()
-        recogVoice.LoadGrammar(BuildGrammar)
+
+        If Core.Game.IsInMenu Then
+            recogVoice.LoadGrammar(GrammarEngine.MenuGrammar)
+        End If
+
+        ' if the player or opponent entity is unknown, try initiate a new game
+        If intPlayerID = 0 Or intOpponentID = 0 Then
+            onNewGame()
+        End If
+
+        ' Check if we're at the mulligan, if so only the mulligan grammar will be returned
+        If Not Core.Game.IsMulliganDone Then
+            recogVoice.LoadGrammar(GrammarEngine.MulliganGrammar)
+        End If
+
+        recogVoice.LoadGrammar(GrammarEngine.GameGrammar)
         boolUpdating = False
     End Sub ' Handles updating the grammar between commands
     Public Sub onSpeechRecognitionRejected() Handles recogVoice.SpeechRecognitionRejected
@@ -247,12 +228,25 @@ Public Class HDTVoice
         updateRecognizer()
     End Sub
     Public Sub hotkeyWorker_DoWork() Handles workerHotkey.DoWork
-
+        Dim toggleHotkey = Keys.F12
+        Dim pttHotkey = Keys.LShiftKey
         Do
-            Dim toggleHotkey = Keys.F12
-            Dim pttHotkey = Keys.LShiftKey
+            If Not Core.Game.IsRunning Then
+                writeLog("Hearthstone not running, stopping recognizer...")
+                sreListen = False
+                recogVoice.RecognizeAsyncCancel()
+                Do Until Core.Game.IsRunning
+                    Sleep(1000)
+                Loop
+                writeLog("Hearthstone started, starting recognizer...")
+                updateRecognizer()
+                recogVoice.RecognizeAsync(RecognizeMode.Multiple)
+                If My.Settings.boolListenAtStartup Then
+                    sreListen = True
+                End If
+            End If
 
-            If My.Settings.toggleOrPTT Then ' Push-to-talk
+            If My.Settings.boolToggleOrPtt Then ' Push-to-talk
                 Dim hotkeyState As Short = GetAsyncKeyState(pttHotkey)
                 If hotkeyState <> 0 Then
                     sreListen = True
@@ -694,18 +688,18 @@ Public Class HDTVoice
     End Function 'Checks if the hearthstone window is active
     Public Function updateOverlay() As System.Windows.SizeChangedEventHandler
         'Update positioning/visibility of status text
-        If My.Settings.showStatusText = False Then
+        If My.Settings.boolShowNotification = False Then
             textStatus.Visibility = System.Windows.Visibility.Hidden
         Else
             textStatus.Visibility = System.Windows.Visibility.Visible
         End If
-        Select Case My.Settings.statusTextPos ' position status text
+        Select Case My.Settings.intNotificationPos ' position status text
             Case 0 'Top left
                 Canvas.SetTop(textStatus, 32)
                 Canvas.SetLeft(textStatus, 8)
                 textStatus.TextAlignment = System.Windows.TextAlignment.Left
             Case 1 'Bottom left
-                Canvas.SetTop(textStatus, canvasOverlay.Height - 64)
+                Canvas.SetTop(textStatus, canvasOverlay.Height - 72)
                 Canvas.SetLeft(textStatus, 8)
                 textStatus.TextAlignment = System.Windows.TextAlignment.Left
             Case 2 'Top right
@@ -713,11 +707,10 @@ Public Class HDTVoice
                 Canvas.SetLeft(textStatus, canvasOverlay.Width - textStatus.ActualWidth - 8)
                 textStatus.TextAlignment = System.Windows.TextAlignment.Right
             Case 3 'Bottom right
-                Canvas.SetTop(textStatus, canvasOverlay.Height - 64)
+                Canvas.SetTop(textStatus, canvasOverlay.Height - 72)
                 Canvas.SetLeft(textStatus, canvasOverlay.Width - textStatus.ActualWidth - 8)
                 textStatus.TextAlignment = System.Windows.TextAlignment.Right
         End Select
-
         Return Nothing
     End Function 'Handles changing the overlay layout when it is resized
     Public Sub updateStatusText(Status As String)
@@ -729,9 +722,6 @@ Public Class HDTVoice
             textStatus.Dispatcher.Invoke(Sub()
                                              Dim newStatus = "HDT-Voice: "
                                              newStatus &= Status
-                                             If My.Settings.showLast Then
-                                                 newStatus &= vbNewLine & "Last executed: " & strLastCommand
-                                             End If
                                              textStatus.Text = newStatus
                                              timerReset.Enabled = False  ' Reset interval
                                              timerReset.Enabled = True
@@ -747,7 +737,7 @@ Public Class HDTVoice
         Dim formatLine As String = String.Format(LogLine, args)
         formatLine = String.Format("HDT-Voice: {0}", formatLine)
         Debug.WriteLine(formatLine)
-        If My.Settings.outputDebug Then
+        If My.Settings.boolDebugLog Then
             If IsNothing(swDebugLog) Then
                 swDebugLog = New IO.StreamWriter("hdtvoicelog.txt")
             End If

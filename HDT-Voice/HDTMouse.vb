@@ -7,16 +7,16 @@ Imports System.Windows.Forms
 Imports System.Drawing
 
 Public Class Mouse
-    Public Declare Function FindWindow Lib "user32" Alias "FindWindowA" (ByVal lpClassName As String, ByVal lpWindowName As String) As IntPtr
-    Public Declare Function GetWindowRect Lib "user32" Alias "GetWindowRect" (ByVal hwnd As IntPtr, ByRef lpRect As RECT) As Integer
-    Public Declare Sub mouse_event Lib "user32" (ByVal dwFlags As Integer, ByVal dx As Integer, ByVal dy As Integer, ByVal cButtons As Integer, ByVal dwExtraInfo As IntPtr)
+    Private Declare Function FindWindow Lib "user32" Alias "FindWindowA" (ByVal lpClassName As String, ByVal lpWindowName As String) As IntPtr
+    Private Declare Function GetWindowRect Lib "user32" Alias "GetWindowRect" (ByVal hwnd As IntPtr, ByRef lpRect As RECT) As Integer
+    Private Declare Sub mouse_event Lib "user32" (ByVal dwFlags As Integer, ByVal dx As Integer, ByVal dy As Integer, ByVal cButtons As Integer, ByVal dwExtraInfo As IntPtr)
 
     Const MOUSE_LEFTDOWN As UInteger = &H2
     Const MOUSE_LEFTUP As UInteger = &H4
     Const MOUSE_RIGHTDOWN As UInteger = &H8
     Const MOUSE_RIGHTUP As UInteger = &H10
     Private PlayerID, OpponentID As Integer
-    Structure RECT
+    Public Structure RECT
         Public Left As Integer
         Public Top As Integer
         Public Right As Integer
@@ -228,7 +228,7 @@ Public Class Mouse
 
         Dim duration = 50
 
-        If My.Settings.smoothCursor Then
+        If My.Settings.boolSmoothCursor Then
             ' Do smooth cursor movement
             Dim cursorX As Integer = Cursor.Position.X
             Dim cursorY As Integer = Cursor.Position.Y

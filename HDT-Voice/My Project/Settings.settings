@@ -2,37 +2,31 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="My" GeneratedClassName="MySettings" UseMySettingsClassName="true">
   <Profiles />
   <Settings>
-    <Setting Name="Threshold" Type="System.Int32" Scope="User">
+    <Setting Name="intThreshold" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">90</Value>
     </Setting>
-    <Setting Name="showLast" Type="System.Boolean" Scope="User">
+    <Setting Name="boolDebugLog" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="outputDebug" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
-    </Setting>
-    <Setting Name="showStatusText" Type="System.Boolean" Scope="User">
+    <Setting Name="boolShowNotification" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="statusTextPos" Type="System.Int32" Scope="User">
+    <Setting Name="intNotificationPos" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
-    <Setting Name="quickPlay" Type="System.Boolean" Scope="User">
+    <Setting Name="boolQuickPlay" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="smoothCursor" Type="System.Boolean" Scope="User">
+    <Setting Name="boolSmoothCursor" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="cursorSpeed" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">2</Value>
-    </Setting>
-    <Setting Name="autoListen" Type="System.Boolean" Scope="User">
+    <Setting Name="boolListenAtStartup" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="toggleOrPTT" Type="System.Boolean" Scope="User">
+    <Setting Name="boolToggleOrPtt" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="playAudio" Type="System.Boolean" Scope="User">
+    <Setting Name="boolRecognizedAudio" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
   </Settings>

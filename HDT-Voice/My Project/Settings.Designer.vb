@@ -57,132 +57,108 @@ Namespace My
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("90")>  _
-        Public Property Threshold() As Integer
+        Public Property intThreshold() As Integer
             Get
-                Return CType(Me("Threshold"),Integer)
+                Return CType(Me("intThreshold"),Integer)
             End Get
             Set
-                Me("Threshold") = value
+                Me("intThreshold") = value
             End Set
         End Property
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("False")>  _
-        Public Property showLast() As Boolean
+        Public Property boolDebugLog() As Boolean
             Get
-                Return CType(Me("showLast"),Boolean)
+                Return CType(Me("boolDebugLog"),Boolean)
             End Get
             Set
-                Me("showLast") = value
-            End Set
-        End Property
-        
-        <Global.System.Configuration.UserScopedSettingAttribute(),  _
-         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-         Global.System.Configuration.DefaultSettingValueAttribute("False")>  _
-        Public Property outputDebug() As Boolean
-            Get
-                Return CType(Me("outputDebug"),Boolean)
-            End Get
-            Set
-                Me("outputDebug") = value
+                Me("boolDebugLog") = value
             End Set
         End Property
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
-        Public Property showStatusText() As Boolean
+        Public Property boolShowNotification() As Boolean
             Get
-                Return CType(Me("showStatusText"),Boolean)
+                Return CType(Me("boolShowNotification"),Boolean)
             End Get
             Set
-                Me("showStatusText") = value
+                Me("boolShowNotification") = value
             End Set
         End Property
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("0")>  _
-        Public Property statusTextPos() As Integer
+        Public Property intNotificationPos() As Integer
             Get
-                Return CType(Me("statusTextPos"),Integer)
+                Return CType(Me("intNotificationPos"),Integer)
             End Get
             Set
-                Me("statusTextPos") = value
+                Me("intNotificationPos") = value
             End Set
         End Property
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
-        Public Property quickPlay() As Boolean
+        Public Property boolQuickPlay() As Boolean
             Get
-                Return CType(Me("quickPlay"),Boolean)
+                Return CType(Me("boolQuickPlay"),Boolean)
             End Get
             Set
-                Me("quickPlay") = value
+                Me("boolQuickPlay") = value
             End Set
         End Property
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
-        Public Property smoothCursor() As Boolean
+        Public Property boolSmoothCursor() As Boolean
             Get
-                Return CType(Me("smoothCursor"),Boolean)
+                Return CType(Me("boolSmoothCursor"),Boolean)
             End Get
             Set
-                Me("smoothCursor") = value
-            End Set
-        End Property
-        
-        <Global.System.Configuration.UserScopedSettingAttribute(),  _
-         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-         Global.System.Configuration.DefaultSettingValueAttribute("2")>  _
-        Public Property cursorSpeed() As Integer
-            Get
-                Return CType(Me("cursorSpeed"),Integer)
-            End Get
-            Set
-                Me("cursorSpeed") = value
+                Me("boolSmoothCursor") = value
             End Set
         End Property
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
-        Public Property autoListen() As Boolean
+        Public Property boolListenAtStartup() As Boolean
             Get
-                Return CType(Me("autoListen"),Boolean)
+                Return CType(Me("boolListenAtStartup"),Boolean)
             End Get
             Set
-                Me("autoListen") = value
+                Me("boolListenAtStartup") = value
             End Set
         End Property
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("False")>  _
-        Public Property toggleOrPTT() As Boolean
+        Public Property boolToggleOrPtt() As Boolean
             Get
-                Return CType(Me("toggleOrPTT"),Boolean)
+                Return CType(Me("boolToggleOrPtt"),Boolean)
             End Get
             Set
-                Me("toggleOrPTT") = value
+                Me("boolToggleOrPtt") = value
             End Set
         End Property
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
-        Public Property playAudio() As Boolean
+        Public Property boolRecognizedAudio() As Boolean
             Get
-                Return CType(Me("playAudio"),Boolean)
+                Return CType(Me("boolRecognizedAudio"),Boolean)
             End Get
             Set
-                Me("playAudio") = value
+                Me("boolRecognizedAudio") = value
             End Set
         End Property
     End Class

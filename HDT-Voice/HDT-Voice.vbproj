@@ -84,7 +84,13 @@
   <ItemGroup>
     <Compile Include="HDTGrammarEngine.vb" />
     <Compile Include="HDTMouse.vb" />
-    <Compile Include="HDTVoicePlugin.vb" />
+    <Compile Include="HDTPlugin\configMain.xaml.vb">
+      <DependentUpon>configMain.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="HDTPlugin\configRecog.xaml.vb">
+      <DependentUpon>configRecog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="HDTPlugin\HDTVoicePlugin.vb" />
     <Compile Include="HDTVoice.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
@@ -100,9 +106,6 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
-    </Compile>
-    <Compile Include="metroConfig.xaml.vb">
-      <DependentUpon>metroConfig.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -127,7 +130,11 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Page Include="metroConfig.xaml">
+    <Page Include="HDTPlugin\configMain.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="HDTPlugin\configRecog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

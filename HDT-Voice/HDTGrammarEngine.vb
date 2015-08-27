@@ -203,89 +203,91 @@ Public Class GrammarEngine
         End If
     End Function     ' Retrieves the active hero power and generates Grammar
 
-    Public Function BuildMenuGrammar() As GrammarBuilder
-        Dim menuBuilder As New GrammarBuilder
-        Dim menuChoices As New Choices
+    Public ReadOnly Property MenuGrammar As Grammar
+        Get
+            Dim menuChoices As New Choices
+            Dim menuBuilder As New GrammarBuilder
 
+            menuChoices.Add(New SemanticResultKey("menu", "play"))
+            menuChoices.Add(New SemanticResultKey("menu", "casual mode"))
+            menuChoices.Add(New SemanticResultKey("menu", "ranked mode"))
+            menuChoices.Add(New SemanticResultKey("menu", "basic decks"))
+            menuChoices.Add(New SemanticResultKey("menu", "custom decks"))
+            menuChoices.Add(New SemanticResultKey("menu", "start game"))
 
-        menuChoices.Add(New SemanticResultKey("menu", "play"))
-        menuChoices.Add(New SemanticResultKey("menu", "casual mode"))
-        menuChoices.Add(New SemanticResultKey("menu", "ranked mode"))
-        menuChoices.Add(New SemanticResultKey("menu", "basic decks"))
-        menuChoices.Add(New SemanticResultKey("menu", "custom decks"))
-        menuChoices.Add(New SemanticResultKey("menu", "start game"))
+            menuChoices.Add(New SemanticResultKey("menu", "solo"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus mage"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus hunter"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus warrior"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus shaman"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus druid"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus priest"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus rogue"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus paladin"))
+            menuChoices.Add(New SemanticResultKey("menu", "versus warlock"))
 
-        menuChoices.Add(New SemanticResultKey("menu", "solo"))
-        menuChoices.Add(New SemanticResultKey("menu", "versus mage"))
-        menuChoices.Add(New SemanticResultKey("menu", "versus hunter"))
-        menuChoices.Add(New SemanticResultKey("menu", "versus warrior"))
-        menuChoices.Add(New SemanticResultKey("menu", "versus shaman"))
-        menuChoices.Add(New SemanticResultKey("menu", "versus druid"))
-        menuChoices.Add(New SemanticResultKey("menu", "versus priest"))
-        menuChoices.Add(New SemanticResultKey("menu", "versus rogue"))
-        menuChoices.Add(New SemanticResultKey("menu", "versus paladin"))
-        menuChoices.Add(New SemanticResultKey("menu", "versus warlock"))
+            menuChoices.Add(New SemanticResultKey("menu", "arena"))
+            menuChoices.Add(New SemanticResultKey("menu", "start arena"))
+            menuChoices.Add(New SemanticResultKey("menu", "buy arena with gold"))
+            menuChoices.Add(New Choices(New SemanticResultKey("menu", "cancel arena"),
+                                        New SemanticResultKey("menu", New SemanticResultValue("OK", "cancel arena")),
+                                        New SemanticResultKey("menu", New SemanticResultValue("choose", "cancel arena"))))
+            menuChoices.Add(New SemanticResultKey("menu", "hero 1"))
+            menuChoices.Add(New SemanticResultKey("menu", "hero 2"))
+            menuChoices.Add(New SemanticResultKey("menu", "hero 3"))
+            menuChoices.Add(New SemanticResultKey("menu", "card 1"))
+            menuChoices.Add(New SemanticResultKey("menu", "card 2"))
+            menuChoices.Add(New SemanticResultKey("menu", "card 3"))
+            menuChoices.Add(New SemanticResultKey("menu", "confirm"))
 
-        menuChoices.Add(New SemanticResultKey("menu", "arena"))
-        menuChoices.Add(New SemanticResultKey("menu", "start arena"))
-        menuChoices.Add(New SemanticResultKey("menu", "buy arena with gold"))
-        menuChoices.Add(New Choices(New SemanticResultKey("menu", "cancel arena"),
-                                    New SemanticResultKey("menu", New SemanticResultValue("OK", "cancel arena")),
-                                    New SemanticResultKey("menu", New SemanticResultValue("choose", "cancel arena"))))
-        menuChoices.Add(New SemanticResultKey("menu", "hero 1"))
-        menuChoices.Add(New SemanticResultKey("menu", "hero 2"))
-        menuChoices.Add(New SemanticResultKey("menu", "hero 3"))
-        menuChoices.Add(New SemanticResultKey("menu", "card 1"))
-        menuChoices.Add(New SemanticResultKey("menu", "card 2"))
-        menuChoices.Add(New SemanticResultKey("menu", "card 3"))
-        menuChoices.Add(New SemanticResultKey("menu", "confirm"))
+            menuChoices.Add(New Choices(New SemanticResultKey("menu", "brawl"),
+                                        New SemanticResultKey("menu", New SemanticResultValue("tavern brawl", "brawl"))))
+            menuChoices.Add(New SemanticResultKey("menu", "start brawl"))
 
-        menuChoices.Add(New Choices(New SemanticResultKey("menu", "brawl"),
-                                    New SemanticResultKey("menu", New SemanticResultValue("tavern brawl", "brawl"))))
-        menuChoices.Add(New SemanticResultKey("menu", "start brawl"))
+            menuChoices.Add(New SemanticResultKey("menu", "open packs"))
+            menuChoices.Add(New SemanticResultKey("menu", "open top pack"))
+            menuChoices.Add(New SemanticResultKey("menu", "open bottom pack"))
+            menuChoices.Add(New SemanticResultKey("menu", "open card 1"))
+            menuChoices.Add(New SemanticResultKey("menu", "open card 2"))
+            menuChoices.Add(New SemanticResultKey("menu", "open card 3"))
+            menuChoices.Add(New SemanticResultKey("menu", "open card 4"))
+            menuChoices.Add(New SemanticResultKey("menu", "open card 5"))
+            menuChoices.Add(New SemanticResultKey("menu", "done"))
 
-        menuChoices.Add(New SemanticResultKey("menu", "open packs"))
-        menuChoices.Add(New SemanticResultKey("menu", "open top pack"))
-        menuChoices.Add(New SemanticResultKey("menu", "open bottom pack"))
-        menuChoices.Add(New SemanticResultKey("menu", "open card 1"))
-        menuChoices.Add(New SemanticResultKey("menu", "open card 2"))
-        menuChoices.Add(New SemanticResultKey("menu", "open card 3"))
-        menuChoices.Add(New SemanticResultKey("menu", "open card 4"))
-        menuChoices.Add(New SemanticResultKey("menu", "open card 5"))
-        menuChoices.Add(New SemanticResultKey("menu", "done"))
+            menuChoices.Add(New SemanticResultKey("menu", "quest log"))
 
-        menuChoices.Add(New SemanticResultKey("menu", "quest log"))
+            menuChoices.Add(New SemanticResultKey("menu", "cancel"))
+            menuChoices.Add(New SemanticResultKey("menu", "back"))
 
-        menuChoices.Add(New SemanticResultKey("menu", "cancel"))
-        menuChoices.Add(New SemanticResultKey("menu", "back"))
+            Dim deckGrammar As New GrammarBuilder
+            Dim deckChoices As New Choices
+            deckGrammar.Append(New SemanticResultKey("menu", "deck"))
+            For i = 1 To 9
+                deckChoices.Add(New SemanticResultKey("deck", i.ToString))
+            Next
+            deckGrammar.Append(deckChoices)
+            menuChoices.Add(deckGrammar)
+            menuBuilder.Append(menuChoices)
 
-        Dim deckGrammar As New GrammarBuilder
-        Dim deckChoices As New Choices
-        deckGrammar.Append(New SemanticResultKey("menu", "deck"))
-        For i = 1 To 9
-            deckChoices.Add(New SemanticResultKey("deck", i.ToString))
-        Next
-        deckGrammar.Append(deckChoices)
-        menuChoices.Add(deckGrammar)
-        menuBuilder.Append(menuChoices)
+            Return New Grammar(menuBuilder)
+        End Get
+    End Property
+    Public ReadOnly Property MulliganGrammar As Grammar
+        Get
+            myHand = FriendlyHandGrammar()
 
-        Return menuBuilder
-    End Function               ' Builds a simple Grammar for navigating the menu
+            Dim mulliganBuilder As New GrammarBuilder
+            Dim mulliganChoices As New Choices
 
-    Public Function BuildMulliganGrammar() As GrammarBuilder
-        myHand = FriendlyHandGrammar()
+            mulliganBuilder.Append(New SemanticResultKey("action", New SemanticResultValue("click", "mulligan")))
+            mulliganChoices.Add("confirm")
+            mulliganChoices.Add(myHand)
+            mulliganBuilder.Append(mulliganChoices)
 
-        Dim mulliganBuilder As New GrammarBuilder
-        Dim mulliganChoices As New Choices
-
-        mulliganBuilder.Append(New SemanticResultKey("action", New SemanticResultValue("click", "mulligan")))
-        mulliganChoices.Add("confirm")
-        mulliganChoices.Add(myHand)
-        mulliganBuilder.Append(mulliganChoices)
-
-        Return mulliganBuilder
-    End Function           ' Builds the Grammar used during mulligan
-    Public ReadOnly Property GameGrammar As GrammarBuilder
+            Return New Grammar(mulliganBuilder)
+        End Get
+    End Property           ' Builds the Grammar used during mulligan
+    Public ReadOnly Property GameGrammar As Grammar
         Get
             myHand = FriendlyHandGrammar()
             friendlyTargets = FriendlyTargetGrammar()
@@ -312,7 +314,7 @@ Public Class GrammarEngine
                 finalChoice.Add(DebuggerGameCommands)
             End If
 
-            Return New GrammarBuilder(finalChoice)
+            Return New Grammar(finalChoice)
         End Get
     End Property ' Runs all of the Grammar functions below and returns a single GrammarBuilder
 
@@ -325,7 +327,7 @@ Public Class GrammarEngine
             'play card to the left of friendly target
             If friendlyTargets.DebugShowPhrases.Count Then
                 Dim playToFriendly As New GrammarBuilder
-                If Not My.Settings.quickPlay Then _
+                If Not My.Settings.boolQuickPlay Then _
                     playToFriendly.Append("play")
                 playToFriendly.Append(myHand)
                 playToFriendly.Append(New SemanticResultKey("action", New SemanticResultValue(New Choices("on", "to"), "play")))
@@ -338,7 +340,7 @@ Public Class GrammarEngine
             'play card to opposing target
             If opposingTargets.DebugShowPhrases.Count Then
                 Dim playToOpposing As New GrammarBuilder
-                If Not My.Settings.quickPlay Then _
+                If Not My.Settings.boolQuickPlay Then _
                     playToOpposing.Append("play")
                 playToOpposing.Append(myHand)
                 playToOpposing.Append(New SemanticResultKey("action", New SemanticResultValue(New Choices("on", "to"), "play")))
@@ -382,14 +384,14 @@ Public Class GrammarEngine
 
         ' use <hero power>
         Dim heroPower As New GrammarBuilder
-        If Not My.Settings.quickPlay Then _
+        If Not My.Settings.boolQuickPlay Then _
             heroPower.Append("use")
         heroPower.Append(New SemanticResultKey("action", HeroPowerNameGrammar))
         heroTargetChoices.Add(heroPower)
 
         ' use <hero power> on friendly
         Dim heroFriendly As New GrammarBuilder
-        If Not My.Settings.quickPlay Then _
+        If Not My.Settings.boolQuickPlay Then _
             heroFriendly.Append("use")
         heroFriendly.Append(New SemanticResultKey("action", HeroPowerNameGrammar))
         heroFriendly.Append(friendlyNames)
@@ -398,7 +400,7 @@ Public Class GrammarEngine
 
         ' use <hero power> on opposing
         Dim heroOpposing As New GrammarBuilder
-        If Not My.Settings.quickPlay Then _
+        If Not My.Settings.boolQuickPlay Then _
             heroOpposing.Append("use")
         heroOpposing.Append(New SemanticResultKey("action", HeroPowerNameGrammar))
         heroOpposing.Append(opposingNames)
@@ -610,10 +612,10 @@ Public Class GrammarEngine
         End Select
         Return String.Format("{0}{1}", semanticType, Key)
     End Function
-End Class
-Enum GrammarEntityType
+    Enum GrammarEntityType
         Entity
         Card
         Friendly
         Opposing
-End Enum
+    End Enum
+End Class
