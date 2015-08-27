@@ -4,6 +4,10 @@ Imports System.Windows.Media
 
 Imports Hearthstone_Deck_Tracker
 Imports Hearthstone_Deck_Tracker.Plugins
+Imports System.Windows.Controls.Primitives
+Imports System.Windows.Documents
+
+
 
 Imports MahApps.Metro.Controls
 Public Class HDTVoicePlugin
@@ -11,12 +15,13 @@ Public Class HDTVoicePlugin
 
     'Some code is based on code found in HDT Compatibility Window
 
-    Public Shared PluginVersion As New Version(0, 7, 4)
+    Public Shared PluginVersion As New Version(0, 7, 5)
 
-    Private createdSettings As Boolean = False
+    Private createdSettings, createdUpdateNews As Boolean
     Private configRecog As configRecog
     Private configMain As configMain
     Public voicePlugin As HDTVoice
+    Private hdtNewsPanel As Object
 
     ' HDT Plugin Implementation
     Public ReadOnly Property Author As String Implements IPlugin.Author
@@ -70,6 +75,7 @@ Public Class HDTVoicePlugin
     End Sub
     Public Sub OnLoad() Implements IPlugin.OnLoad
         createdSettings = False
+        createdUpdateNews = False
         configMain = New configMain
         configRecog = New configRecog
         voicePlugin = New HDTVoice
@@ -91,6 +97,10 @@ Public Class HDTVoicePlugin
     Public Sub OnUpdate() Implements IPlugin.OnUpdate
         If Not createdSettings Then
             CreateSettings()
+        End If
+        If Not createdUpdateNews Then
+            CreateUpdateNews()
+
         End If
     End Sub
     Public Sub ClickMenuItem()
@@ -139,6 +149,75 @@ Public Class HDTVoicePlugin
         hdtMenuTree.Items.Add(itemRoot)
 
         createdSettings = True
+
+    End Sub
+    Public Sub CreateUpdateNews()
+        ' Checks for an update and adds a news item if there wasn't one
+        Dim gh As New Github
+        Dim newVer = gh.CheckForUpdate("topher-au", "HDT-Voice", HDTVoicePlugin.PluginVersion)
+        If Not IsNothing(newVer) Then
+            Dim newsBar As StatusBar = Nothing
+
+            Dim TopRow As RowDefinition = Nothing
+            Dim StatusBarNews As StatusBar = Nothing
+
+            For Each item In FindVisualChildren(Of Grid)(Helper.MainWindow)
+                For Each rd In item.RowDefinitions
+                    If Not IsNothing(rd.Name) Then
+                        If Not rd.Name.Trim = String.Empty Then
+                            If rd.Name = "TopRow" Then
+                                TopRow = rd
+                            End If
+                        End If
+                    End If
+                Next
+
+            Next
+
+            For Each item In FindVisualChildren(Of StatusBar)(Helper.MainWindow)
+                If Not IsNothing(item.Name) Then
+                    If item.Name = "StatusBarNews" Then
+                        StatusBarNews = item
+                    End If
+                End If
+            Next
+
+            If Not IsNothing(TopRow) And Not IsNothing(StatusBarNews) Then
+                If StatusBarNews.Visibility = Visibility.Collapsed Then
+                    TopRow.Height = New GridLength(30)
+                    StatusBarNews.Visibility = Visibility.Visible
+
+                    Dim newsLink As New Hyperlink
+                    newsLink.NavigateUri = New Uri("https://www.github.com/topher-au/HDT-Voice/releases/latest")
+                    newsLink.Inlines.Add(New Run(String.Format("HDT-Voice version {0} is available now!", HDTVoicePlugin.PluginVersion.ToString)))
+                    newsLink.Foreground = New SolidColorBrush(Colors.White)
+                    AddHandler newsLink.RequestNavigate, Sub()
+                                                             Process.Start(newsLink.NavigateUri.ToString)
+                                                             Dim buttonClose As Button = StatusBarNews.Items.Item(5).Content
+                                                             Dim clickEvent As New RoutedEventArgs
+                                                             clickEvent.RoutedEvent = Button.ClickEvent
+                                                             buttonClose.RaiseEvent(clickEvent)
+                                                         End Sub
+
+                    Dim voiceBlock As New TextBlock
+                    voiceBlock.Inlines.Add(newsLink)
+
+                    StatusBarNews.Items.Item(1) = Nothing
+                    StatusBarNews.Items.Item(2).Content = voiceBlock
+                    StatusBarNews.Items.Item(3) = Nothing
+                    StatusBarNews.Items.Item(4) = Nothing
+                    StatusBarNews.Margin = New Thickness(1)
+                End If
+                createdUpdateNews = True
+            End If
+
+            configMain.buttonUpdate.Content = String.Format("Version {0} Now Available", newVer.tag_name)
+            configMain.buttonUpdate.Visibility = System.Windows.Visibility.Visible
+        Else
+            configMain.buttonUpdate.Visibility = System.Windows.Visibility.Hidden
+            createdUpdateNews = True
+        End If
+
 
     End Sub
     Public Sub ShowPane(pane As Object)

@@ -25,14 +25,7 @@ Public Class configMain
 
         AddHandler buttonUpdate.Click, AddressOf ClickUpdateButton
 
-        Dim gh As New Github
-        Dim Update = gh.CheckForUpdate("topher-au", "HDT-Voice", HDTVoicePlugin.PluginVersion)
-        If Not IsNothing(Update) Then
-            buttonUpdate.Content = String.Format("Version {0} Now Available", Update.tag_name)
-            buttonUpdate.Visibility = System.Windows.Visibility.Visible
-        Else
-            buttonUpdate.Visibility = System.Windows.Visibility.Hidden
-        End If
+
 
     End Sub
     Sub SaveSettings()

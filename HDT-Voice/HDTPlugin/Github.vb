@@ -5,7 +5,7 @@ Public Class Github
     Public Function CheckForUpdate(user As String, repo As String, version As Version) As GithubRelease
         Try
             Dim latest As GithubRelease = GetLatestRelease(user, repo)
-
+            If latest Is Nothing Then Return Nothing
             Dim v As Version = New Version(latest.tag_name)
 
             If v.CompareTo(version) > 0 Then
@@ -22,7 +22,13 @@ Public Class Github
             Dim json = ""
             Using wc As New WebClient
                 wc.Headers.Add(HttpRequestHeader.UserAgent, user)
-                json = wc.DownloadString(url)
+                Try
+                    json = wc.DownloadString(url)
+                Catch ex As Exception
+                    Debug.WriteLine("Error checking for HDT-Voice update: " & ex.Message)
+                    Return Nothing
+                End Try
+
             End Using
 
             Dim releases = JsonConvert.DeserializeObject(Of List(Of GithubRelease))(json)
