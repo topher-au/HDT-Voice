@@ -23,6 +23,14 @@
                         </ComboBox>
                     </DockPanel>
                     <DockPanel Margin="10">
+                        <Label Content="Notification size" />
+                        <ComboBox Name="comboNotificationSize" Width="120" HorizontalAlignment="Right">
+                            <ListBoxItem Content="Small"/>
+                            <ListBoxItem Content="Medium"/>
+                            <ListBoxItem Content="Large"/>
+                        </ComboBox>
+                    </DockPanel>
+                    <DockPanel Margin="10">
                         <CheckBox Name="checkSmoothMouse" Content="Enable smooth mouse movement" />
                     </DockPanel>
                     <DockPanel Margin="10">

@@ -161,6 +161,18 @@ Namespace My
                 Me("boolRecognizedAudio") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("1")>  _
+        Public Property intNotificationSize() As Integer
+            Get
+                Return CType(Me("intNotificationSize"),Integer)
+            End Get
+            Set
+                Me("intNotificationSize") = value
+            End Set
+        End Property
     End Class
 End Namespace
 

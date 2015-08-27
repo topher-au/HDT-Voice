@@ -85,8 +85,8 @@
     <Import Include="System.Threading.Tasks" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HDTGrammarEngine.vb" />
-    <Compile Include="HDTMouse.vb" />
+    <Compile Include="HDTVoice\HDTGrammarEngine.vb" />
+    <Compile Include="HDTVoice\HDTMouse.vb" />
     <Compile Include="HDTPlugin\configMain.xaml.vb">
       <DependentUpon>configMain.xaml</DependentUpon>
     </Compile>
@@ -95,7 +95,8 @@
     </Compile>
     <Compile Include="HDTPlugin\Github.vb" />
     <Compile Include="HDTPlugin\HDTVoicePlugin.vb" />
-    <Compile Include="HDTVoice.vb" />
+    <Compile Include="HDTVoice\HDTPopup.vb" />
+    <Compile Include="HDTVoice\HDTVoice.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
       <AutoGen>True</AutoGen>
@@ -122,6 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="Resources\app.config" />
     <None Include="My Project\Application.myapp">
       <Generator>MyApplicationCodeGenerator</Generator>
       <LastGenOutput>Application.Designer.vb</LastGenOutput>
@@ -143,7 +145,7 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <None Include="Resources\packages.config" />
     <None Include="Resources\recognizedsound.wav" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />

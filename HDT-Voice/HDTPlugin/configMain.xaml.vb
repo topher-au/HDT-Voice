@@ -14,6 +14,9 @@ Public Class configMain
         comboNotificationPos.SelectedIndex = My.Settings.intNotificationPos
         AddHandler comboNotificationPos.SelectionChanged, AddressOf SaveSettings
 
+        comboNotificationSize.SelectedIndex = My.Settings.intNotificationSize
+        AddHandler comboNotificationSize.SelectionChanged, AddressOf SaveSettings
+
         checkSmoothMouse.IsChecked = My.Settings.boolSmoothCursor
         AddHandler checkSmoothMouse.Click, AddressOf SaveSettings
 
@@ -36,9 +39,13 @@ Public Class configMain
         My.Settings.boolListenAtStartup = checkAutoStart.IsChecked
         My.Settings.boolShowNotification = checkShowNotification.IsChecked
         My.Settings.intNotificationPos = comboNotificationPos.SelectedIndex
+        My.Settings.intNotificationSize = comboNotificationSize.SelectedIndex 
         My.Settings.boolSmoothCursor = checkSmoothMouse.IsChecked
         My.Settings.boolDebugLog = checkDebugLog.IsChecked
         My.Settings.Save()
+
+        comboNotificationSize.IsEnabled = checkShowNotification.IsChecked
+        comboNotificationPos.IsEnabled = checkShowNotification.IsChecked
     End Sub
     Public Sub ClickUpdateButton()
         Process.Start("https://www.github.com/topher-au/HDT-Voice/releases/latest")

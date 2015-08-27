@@ -206,7 +206,6 @@ Public Class GrammarEngine
     Public ReadOnly Property MenuGrammar As Grammar
         Get
             Dim menuChoices As New Choices
-            Dim menuBuilder As New GrammarBuilder
 
             menuChoices.Add(New SemanticResultKey("menu", "play"))
             menuChoices.Add(New SemanticResultKey("menu", "casual mode"))
@@ -267,9 +266,8 @@ Public Class GrammarEngine
             Next
             deckGrammar.Append(deckChoices)
             menuChoices.Add(deckGrammar)
-            menuBuilder.Append(menuChoices)
 
-            Return New Grammar(menuBuilder)
+            Return New Grammar(menuChoices)
         End Get
     End Property
     Public ReadOnly Property MulliganGrammar As Grammar

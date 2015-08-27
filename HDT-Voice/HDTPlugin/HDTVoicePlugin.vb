@@ -9,7 +9,7 @@ Imports MahApps.Metro.Controls
 Public Class HDTVoicePlugin
     Implements IPlugin
 
-    Public Shared PluginVersion As New Version(0, 7, 3)
+    Public Shared PluginVersion As New Version(0, 7, 4)
 
     Private createdSettings As Boolean = False
     Private configRecog As configRecog

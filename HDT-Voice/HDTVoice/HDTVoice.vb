@@ -13,33 +13,30 @@ Imports Hearthstone_Deck_Tracker.Hearthstone.Entities
 
 Public Class HDTVoice
     ' Windows API Declarations
-    Public Declare Function GetForegroundWindow Lib "user32" () As System.IntPtr
-    Public Declare Auto Function GetWindowText Lib "user32" (ByVal hWnd As System.IntPtr, ByVal lpString As System.Text.StringBuilder, ByVal cch As Integer) As Integer
-    Declare Function GetAsyncKeyState Lib "user32" (ByVal vkey As Integer) As Short
+    Private Declare Function GetForegroundWindow Lib "user32" () As System.IntPtr
+    Private Declare Auto Function GetWindowText Lib "user32" (ByVal hWnd As System.IntPtr, ByVal lpString As System.Text.StringBuilder, ByVal cch As Integer) As Integer
+    Private Declare Function GetAsyncKeyState Lib "user32" (ByVal vkey As Integer) As Short
 
     ' Speech recognition objects
-    Public WithEvents recogVoice As SpeechRecognitionEngine
-    Public WithEvents workerHotkey As New BackgroundWorker
-    Public sreListen As Boolean                             ' Should we be listening?
-    Public boolUpdating As Boolean                          ' True when SRE update in progress, FALSE otherwise
+    Private WithEvents recogVoice As SpeechRecognitionEngine
+    Private WithEvents workerHotkey As New BackgroundWorker
+    Private sreListen As Boolean                             ' Should we be listening?
+    Private boolUpdating As Boolean                          ' True when SRE update in progress, FALSE otherwise
 
     ' Action processor list and worker
-    Public listActions As New List(Of SpeechRecognizedEventArgs)
-    Public WithEvents workerActions As New BackgroundWorker
+    Private listActions As New List(Of SpeechRecognizedEventArgs)
+    Private WithEvents workerActions As New BackgroundWorker
 
 
     'HDT-Voice data objects
-    Public swDebugLog As IO.StreamWriter                    ' Debug log writer
-    Public strLastCommand As New String("none")             ' Last command executed
-    Public WithEvents timerReset As New Timer               ' Used to reset status text
+    Private swDebugLog As IO.StreamWriter                    ' Debug log writer
 
     'Overlay elements
-    Public canvasOverlay As Canvas = Core.OverlayCanvas     ' The main overlay object
-    Public textStatus As HearthstoneTextBlock               ' Status text block
+    Private canvasOverlay As Canvas = Core.OverlayCanvas     ' The main overlay object
+    Private rectStatusBG As Rectangle = Nothing
 
-
-    Public intPlayerID As Integer = 0
-    Public intOpponentID As Integer = 0
+    Private intPlayerID As Integer = 0
+    Private intOpponentID As Integer = 0
 
     Public Shared GrammarEngine As New GrammarEngine
     Public Mouse As New Mouse
@@ -77,14 +74,6 @@ Public Class HDTVoice
 
         writeLog("HDT-Voice {0}.{1} ({2}) | {3}x{4}", My.Application.Info.Version.Major, My.Application.Info.Version.Minor, My.Computer.Info.OSFullName, Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height)
         writeLog("Initializing speech recognition object")
-
-        ' Initialize output displays
-        textStatus = New HearthstoneTextBlock
-        textStatus.Text = "HDT-Voice: Loading, please wait..."
-        textStatus.FontSize = 16
-        Canvas.SetTop(textStatus, 22)
-        Canvas.SetLeft(textStatus, 4)
-        canvasOverlay.Children.Add(textStatus)
 
         ' Attempt to initialize speech recognition
         Try
@@ -129,22 +118,23 @@ Public Class HDTVoice
         GameEvents.OnPlayerPlayToHand.Add(New Action(Of Card)(AddressOf updateRecognizer))
         GameEvents.OnOpponentPlay.Add(New Action(Of Card)(AddressOf updateRecognizer))
 
-        'Handlers for plugin settings and overlay size
-        AddHandler My.Settings.PropertyChanged, AddressOf updateOverlay
-        AddHandler Core.OverlayCanvas.SizeChanged, AddressOf updateOverlay
-
-        timerReset.Interval = 2500
-        timerReset.Enabled = True
-
         'Load default grammar and start recognition
-        recogVoice.LoadGrammar(New Grammar(New GrammarBuilder("default")))
+        recogVoice.LoadGrammar(GrammarEngine.MenuGrammar)
         recogVoice.RecognizeAsync(RecognizeMode.Multiple)
 
         workerHotkey.RunWorkerAsync()       ' Start listening for hotkey
         workerActions.RunWorkerAsync()      ' Start action processor
 
-        ' Start listening if the option is enabled
-        If My.Settings.boolListenAtStartup And Not My.Settings.boolToggleOrPtt Then sreListen = True
+        If My.Settings.boolToggleOrPtt Then ' Push to talk enabled, don't start listening
+            sreListen = False
+            PopupNotification("HDT-Voice loaded (hold Left Shift to speak)", 4000)
+        ElseIf My.Settings.boolListenAtStartup Then ' Start listening
+            sreListen = True
+            PopupNotification("HDT-Voice loaded and enabled (F12 to disable)", 4000)
+        Else 'Don't start listening
+            sreListen = False
+            PopupNotification("HDT-Voice loaded (F12 to enable)", 4000)
+        End If
     End Sub ' Run when the plugin is first initialized
     Public Sub Unload()
         If Not swDebugLog Is Nothing Then
@@ -198,7 +188,6 @@ Public Class HDTVoice
         End If
 
         If sreListen Then
-            updateStatusText("Heard """ & e.Result.Text & """")
 
             ' Speech was recognized, play audio
             If My.Settings.boolRecognizedAudio Then _
@@ -210,30 +199,38 @@ Public Class HDTVoice
 
     End Sub ' Handles processing recognized speech input
     Public Sub onRecognizerUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles recogVoice.RecognizerUpdateReached
-        If Not Core.Game.IsRunning Then Exit Sub ' do nothing if the game is not running
+        If Not Core.Game.IsRunning Then
+            writeLog("Tried to update recog but game not running!")
+            Exit Sub ' do nothing if the game is not running
+        End If
+
         boolUpdating = True
         recogVoice.UnloadAllGrammars()
 
         If Core.Game.IsInMenu Then
-            recogVoice.LoadGrammar(GrammarEngine.MenuGrammar)
+            Dim mG = GrammarEngine.MenuGrammar
+            recogVoice.LoadGrammar(mG)
+            boolUpdating = False
+            Return
         End If
 
-        ' if the player or opponent entity is unknown, try initiate a new game
         If intPlayerID = 0 Or intOpponentID = 0 Then
             onNewGame()
         End If
 
-        ' Check if we're at the mulligan, if so only the mulligan grammar will be returned
         If Not Core.Game.IsMulliganDone Then
+
             recogVoice.LoadGrammar(GrammarEngine.MulliganGrammar)
+        Else
+            recogVoice.LoadGrammar(GrammarEngine.GameGrammar)
         End If
 
-        recogVoice.LoadGrammar(GrammarEngine.GameGrammar)
         boolUpdating = False
     End Sub ' Handles updating the grammar between commands
     Public Sub onSpeechRecognitionRejected() Handles recogVoice.SpeechRecognitionRejected
         ' If recognition fails, refresh Grammar
         updateRecognizer()
+        PopupNotification("Command not recognized", 3000)
     End Sub
     Public Sub hotkeyWorker_DoWork() Handles workerHotkey.DoWork
         Dim toggleHotkey = Keys.F12
@@ -253,33 +250,39 @@ Public Class HDTVoice
                     sreListen = True
                 End If
             End If
+            If IsHearthstoneActive() Then
+                If My.Settings.boolToggleOrPtt Then ' Push-to-talk
+                    Dim hotkeyState As Short = GetAsyncKeyState(pttHotkey)
+                    If hotkeyState <> 0 Then
+                        sreListen = True
+                        PopupNotification("Listening...", 10000)
+                        Do While hotkeyState <> 0
+                            Sleep(5)
+                            hotkeyState = GetAsyncKeyState(pttHotkey)
+                        Loop
+                        PopupNotification("Processing...", 800)
+                        Sleep(100)
+                        Do While recogVoice.AudioState = AudioState.Speech
+                            Sleep(5)
+                        Loop
+                        Sleep(700)
+                        sreListen = False
+                    End If
+                Else ' Toggle
 
-            If My.Settings.boolToggleOrPtt Then ' Push-to-talk
-                Dim hotkeyState As Short = GetAsyncKeyState(pttHotkey)
-                If hotkeyState <> 0 Then
-                    sreListen = True
-                    updateStatusText("Listening...")
-                    Do While hotkeyState <> 0
-                        Sleep(5)
-                        hotkeyState = GetAsyncKeyState(pttHotkey)
-                    Loop
-                    updateStatusText("Processing...")
-                    Do While recogVoice.AudioState = AudioState.Speech
-                        Sleep(5)
-                    Loop
-                    Sleep(500)
-                    sreListen = False
-                    updateStatusText(Nothing)
-                End If
-            Else ' Toggle
-                Dim hotkeyState As Short = GetAsyncKeyState(toggleHotkey)
-                If hotkeyState <> 0 Then
-                    sreListen = Not sreListen
-                    updateStatusText(Nothing)
-                    Sleep(200)
+                    Dim hotkeyState As Short = GetAsyncKeyState(toggleHotkey)
+                    If hotkeyState <> 0 Then
+                        sreListen = Not sreListen
+                        Select Case sreListen
+                            Case False
+                                PopupNotification("Voice control disabled. Press F12 to enable.", 4000)
+                            Case True
+                                PopupNotification("Voice control enabled. Press F12 to disable.", 4000)
+                        End Select
+                        Sleep(200)
+                    End If
                 End If
             End If
-
             Sleep(50)
         Loop
 
@@ -293,7 +296,9 @@ Public Class HDTVoice
             Loop
             If listActions.Count > 0 Then
                 Dim currentAction As String = listActions.Item(0).Result.Text
-                writeLog("Processing action: ""{0}""", currentAction.ToUpper)
+                currentAction = currentAction.Substring(0, 1).ToUpper & currentAction.Substring(1)
+                writeLog("Processing action: ""{0}""", currentAction)
+                PopupNotification(String.Format("""{0}""", currentAction))
                 ProcessAction(listActions.Item(0))       ' Process action
                 listActions.Remove(listActions.Item(0))   ' Remove from list
                 Sleep(100)
@@ -346,8 +351,6 @@ Public Class HDTVoice
                     Mouse.SendClick(Mouse.Buttons.Left)
             End Select
         End If
-
-        strLastCommand = e.Result.Text ' Set last command executed
     End Sub
 
     'Voice command handlers
@@ -694,53 +697,6 @@ Public Class HDTVoice
             Return False
         End If
     End Function 'Checks if the hearthstone window is active
-    Public Function updateOverlay() As System.Windows.SizeChangedEventHandler
-        'Update positioning/visibility of status text
-        If My.Settings.boolShowNotification = False Then
-            textStatus.Visibility = System.Windows.Visibility.Hidden
-        Else
-            textStatus.Visibility = System.Windows.Visibility.Visible
-        End If
-        Select Case My.Settings.intNotificationPos ' position status text
-            Case 0 'Top left
-                Canvas.SetTop(textStatus, 32)
-                Canvas.SetLeft(textStatus, 8)
-                textStatus.TextAlignment = System.Windows.TextAlignment.Left
-            Case 1 'Bottom left
-                Canvas.SetTop(textStatus, canvasOverlay.Height - 72)
-                Canvas.SetLeft(textStatus, 8)
-                textStatus.TextAlignment = System.Windows.TextAlignment.Left
-            Case 2 'Top right
-                Canvas.SetTop(textStatus, 8)
-                Canvas.SetLeft(textStatus, canvasOverlay.Width - textStatus.ActualWidth - 8)
-                textStatus.TextAlignment = System.Windows.TextAlignment.Right
-            Case 3 'Bottom right
-                Canvas.SetTop(textStatus, canvasOverlay.Height - 72)
-                Canvas.SetLeft(textStatus, canvasOverlay.Width - textStatus.ActualWidth - 8)
-                textStatus.TextAlignment = System.Windows.TextAlignment.Right
-        End Select
-        Return Nothing
-    End Function 'Handles changing the overlay layout when it is resized
-    Public Sub updateStatusText(Status As String)
-        If Status = Nothing Then
-            onResetTimer()
-            Return
-        End If
-        Try
-            textStatus.Dispatcher.Invoke(Sub()
-                                             Dim newStatus = "HDT-Voice: "
-                                             newStatus &= Status
-                                             textStatus.Text = newStatus
-                                             timerReset.Enabled = False  ' Reset interval
-                                             timerReset.Enabled = True
-
-                                         End Sub)
-            canvasOverlay.UpdateLayout()
-        Catch ex As Exception
-            Return
-        End Try
-
-    End Sub 'Updates the text on the status text block
     Public Sub writeLog(LogLine As String, ParamArray args As Object())
         Dim formatLine As String = String.Format(LogLine, args)
         formatLine = String.Format("HDT-Voice: {0}", formatLine)
@@ -759,13 +715,14 @@ Public Class HDTVoice
             End If
         End If
     End Sub 'Writes information to the debug output and the logfile if necessary
-    Public Sub onResetTimer() Handles timerReset.Tick
-        If sreListen = True Then
-            updateStatusText("Listening...")
-        Else
-            updateStatusText("Stopped")
+    Public Sub PopupNotification(Text As String, Optional Duration As Integer = 2000)
+        If My.Settings.boolShowNotification Then
+            Dim fadeWorker As New BackgroundWorker
+            ' Spawn backgroundworker to avoid blocking thread with popup
+            AddHandler fadeWorker.DoWork, Sub()
+                                              Dim myPopup As New HDTPopup(Text, Duration)
+                                          End Sub
+            fadeWorker.RunWorkerAsync()
         End If
-
-        timerReset.Enabled = False
-    End Sub ' Resets the status text to default after a period
+    End Sub
 End Class
