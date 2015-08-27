@@ -146,6 +146,14 @@ Public Class HDTVoice
         ' Start listening if the option is enabled
         If My.Settings.boolListenAtStartup And Not My.Settings.boolToggleOrPtt Then sreListen = True
     End Sub ' Run when the plugin is first initialized
+    Public Sub Unload()
+        If Not swDebugLog Is Nothing Then
+            swDebugLog.Flush()
+            swDebugLog.Dispose()
+        End If
+        recogVoice.RecognizeAsyncCancel()
+        recogVoice.Dispose()
+    End Sub
     Public Sub onNewGame()
         writeLog("New Game detected")
         ' Reset controller IDs
@@ -744,7 +752,11 @@ Public Class HDTVoice
             swDebugLog.WriteLine(formatLine)
             swDebugLog.Flush()
         Else
-            swDebugLog = Nothing
+            If Not swDebugLog Is Nothing Then
+                swDebugLog.Dispose()
+            Else
+                swDebugLog = Nothing
+            End If
         End If
     End Sub 'Writes information to the debug output and the logfile if necessary
     Public Sub onResetTimer() Handles timerReset.Tick

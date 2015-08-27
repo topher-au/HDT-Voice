@@ -3,19 +3,19 @@
         InitializeComponent()
 
         checkAutoStart.IsChecked = My.Settings.boolListenAtStartup
-        AddHandler checkAutoStart.Checked, AddressOf SaveSettings
+        AddHandler checkAutoStart.Click, AddressOf SaveSettings
 
         checkShowNotification.IsChecked = My.Settings.boolShowNotification
-        AddHandler checkShowNotification.Checked, AddressOf SaveSettings
+        AddHandler checkShowNotification.Click, AddressOf SaveSettings
 
         comboNotificationPos.SelectedIndex = My.Settings.intNotificationPos
         AddHandler comboNotificationPos.SelectionChanged, AddressOf SaveSettings
 
         checkSmoothMouse.IsChecked = My.Settings.boolSmoothCursor
-        AddHandler checkSmoothMouse.Checked, AddressOf SaveSettings
+        AddHandler checkSmoothMouse.Click, AddressOf SaveSettings
 
         checkDebugLog.IsChecked = My.Settings.boolDebugLog
-        AddHandler checkDebugLog.Checked, AddressOf SaveSettings
+        AddHandler checkDebugLog.Click, AddressOf SaveSettings
 
     End Sub
     Sub SaveSettings()

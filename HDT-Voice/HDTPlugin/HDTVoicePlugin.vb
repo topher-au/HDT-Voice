@@ -12,6 +12,7 @@ Public Class HDTVoicePlugin
     Private createdSettings As Boolean = False
     Private configRecog As configRecog
     Private configMain As configMain
+    Public voicePlugin As HDTVoice
 
     ' HDT Plugin Implementation
     Public ReadOnly Property Author As String Implements IPlugin.Author
@@ -44,11 +45,10 @@ Public Class HDTVoicePlugin
     End Property
     Public ReadOnly Property Version As Version Implements IPlugin.Version
         Get
-            Return New Version(0, 7, 0)
+            Return New Version(0, 7, 2)
         End Get
     End Property
     Public Sub OnButtonPress() Implements IPlugin.OnButtonPress
-
         Dim tV As TreeView = Nothing
         For Each t As TreeView In FindVisualChildren(Of TreeView)(Helper.OptionsMain)
             For Each ti As TreeViewItem In t.Items
@@ -68,12 +68,21 @@ Public Class HDTVoicePlugin
         createdSettings = False
         configMain = New configMain
         configRecog = New configRecog
-
-        Dim voicePlugin As New HDTVoice
+        voicePlugin = New HDTVoice
         voicePlugin.Load()
     End Sub
     Public Sub OnUnload() Implements IPlugin.OnUnload
-        Return
+        My.Settings.Save()
+        voicePlugin.Unload()
+        voicePlugin = Nothing
+        For Each t In FindVisualChildren(Of TreeView)(Helper.OptionsMain)
+            For Each ti As TreeViewItem In FindVisualChildren(Of TreeViewItem)(t)
+                If ti.Header = "Voice Control" Then
+                    t.Items.Remove(ti)
+                    Return
+                End If
+            Next
+        Next
     End Sub
     Public Sub OnUpdate() Implements IPlugin.OnUpdate
         If Not createdSettings Then

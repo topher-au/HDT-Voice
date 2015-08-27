@@ -9,16 +9,16 @@
         labelThreshold.Content = String.Format("{0}%", My.Settings.intThreshold)
 
         checkRecognizeSound.IsChecked = My.Settings.boolRecognizedAudio
-        AddHandler checkRecognizeSound.Checked, AddressOf SaveSettings
+        AddHandler checkRecognizeSound.Click, AddressOf SaveSettings
 
         checkQuickPlay.IsChecked = My.Settings.boolQuickPlay
-        AddHandler checkQuickPlay.Checked, AddressOf SaveSettings
+        AddHandler checkQuickPlay.Click, AddressOf SaveSettings
 
         radioHotToggle.IsChecked = Not My.Settings.boolToggleOrPtt
-        AddHandler radioHotToggle.Checked, AddressOf SaveSettings
+        AddHandler radioHotToggle.Click, AddressOf SaveSettings
 
         radioHotPush.IsChecked = My.Settings.boolToggleOrPtt
-        AddHandler radioHotPush.Checked, AddressOf SaveSettings
+        AddHandler radioHotPush.Click, AddressOf SaveSettings
     End Sub
     Sub SliderChanged()
         My.Settings.intThreshold = sliderThreshold.Value
