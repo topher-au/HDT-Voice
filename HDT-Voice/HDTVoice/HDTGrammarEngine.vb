@@ -1,8 +1,8 @@
 ﻿Imports System.Speech.Recognition
 Imports Hearthstone_Deck_Tracker
+Imports Hearthstone_Deck_Tracker.Hearthstone
 Imports Hearthstone_Deck_Tracker.API
 Imports Hearthstone_Deck_Tracker.Enums
-Imports Hearthstone_Deck_Tracker.Hearthstone
 Imports Hearthstone_Deck_Tracker.Hearthstone.Entities
 Public Class GrammarEngine
 
@@ -199,10 +199,13 @@ Public Class GrammarEngine
             heroChoice.Add(New SemanticResultValue(heroPowerName, "hero"))
             Return New GrammarBuilder(heroChoice)
         Else
-            Return Nothing
+            Return New GrammarBuilder(heroChoice)
         End If
     End Function     ' Retrieves the active hero power and generates Grammar
-
+    Public Sub New()
+        GameEvents.OnGameStart.Add(New Action(AddressOf StartNewGame))
+        StartNewGame()
+    End Sub
     Public ReadOnly Property MenuGrammar As Grammar
         Get
             Dim menuChoices As New Choices
@@ -254,7 +257,7 @@ Public Class GrammarEngine
             menuChoices.Add(New SemanticResultKey("menu", "done"))
 
             menuChoices.Add(New SemanticResultKey("menu", "quest log"))
-
+            menuChoices.Add(New SemanticResultKey("menu", "click"))
             menuChoices.Add(New SemanticResultKey("menu", "cancel"))
             menuChoices.Add(New SemanticResultKey("menu", "back"))
 
@@ -287,6 +290,9 @@ Public Class GrammarEngine
     End Property           ' Builds the Grammar used during mulligan
     Public ReadOnly Property GameGrammar As Grammar
         Get
+            If friendlyID = 0 Then
+                StartNewGame()
+            End If
             myHand = FriendlyHandGrammar()
             friendlyTargets = FriendlyTargetGrammar()
             opposingTargets = OpposingTargetGrammar()
@@ -311,6 +317,8 @@ Public Class GrammarEngine
             If Debugger.IsAttached Then
                 finalChoice.Add(DebuggerGameCommands)
             End If
+
+            Debug.WriteLine(finalChoice.ToGrammarBuilder.DebugShowPhrases)
 
             Return New Grammar(finalChoice)
         End Get
@@ -431,7 +439,6 @@ Public Class GrammarEngine
 
         Dim targetCard As New GrammarBuilder
         targetCard.Append(New SemanticResultKey("action", "target"))
-        targetCard.Append("card")
         targetCard.Append(myHand)
         targetChoices.Add(targetCard)
 
@@ -488,7 +495,7 @@ Public Class GrammarEngine
         Return New GrammarBuilder(debugChoices)
     End Function     ' Debugger only commands
 
-    Public Sub StartNewGame()
+    Private Sub StartNewGame()
         friendlyID = Nothing
         opposingID = Nothing
 
@@ -587,19 +594,29 @@ Public Class GrammarEngine
     Private ReadOnly Property Entities As Entity()
         Get
             ' Clone entities from game and return as array
-            Return Helper.DeepClone(Core.Game.Entities).Values.ToArray
+            Dim EntArray = Helper.DeepClone(Core.Game.Entities).Values.ToArray
+            Return EntArray
         End Get
     End Property                ' Clones Entites from HDT and creates an array
     Private ReadOnly Property PlayerEntity As Entity
         Get
             ' Return the Entity representing the player
-            Return Entities.FirstOrDefault(Function(x) x.IsPlayer())
+            Try
+                Return Entities.First(Function(x) x.IsPlayer())
+            Catch ex As Exception
+                Return Nothing
+            End Try
         End Get
     End Property              ' Gets the player's current Entity
     Private ReadOnly Property OpponentEntity As Entity
         Get
             ' Return the Entity representing the player
-            Return Entities.FirstOrDefault(Function(x) x.IsOpponent())
+            Try
+                Return Entities.First(Function(x) x.IsOpponent())
+            Catch ex As Exception
+                Return Nothing
+            End Try
+
         End Get
     End Property            ' Gets the opponent's current Entity
     Private Function EntityKey(Type As GrammarEntityType, Key As Integer) As String

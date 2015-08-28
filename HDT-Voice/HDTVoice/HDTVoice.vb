@@ -27,6 +27,7 @@ Public Class HDTVoice
     Private listActions As New List(Of SpeechRecognizedEventArgs)
     Private WithEvents workerActions As New BackgroundWorker
 
+    'Private MinionOverlay As New HDTMinionOverlay
 
     'HDT-Voice data objects
     Private swDebugLog As IO.StreamWriter                    ' Debug log writer
@@ -39,7 +40,7 @@ Public Class HDTVoice
     Private intOpponentID As Integer = 0
 
     Public Shared GrammarEngine As New GrammarEngine
-    Public Mouse As New Mouse
+    Public Shared Mouse As New Mouse
 
     'Properties
     Private ReadOnly Property Entities As Entity()
@@ -56,13 +57,21 @@ Public Class HDTVoice
     End Property          ' The list of entities for the current game
     Private ReadOnly Property PlayerEntity As Entity
         Get
-            Return Entities.FirstOrDefault(Function(x) x.IsPlayer())
+            Try
+                Return Entities.First(Function(x) x.IsPlayer())
+            Catch
+                Return Nothing
+            End Try
         End Get
     End Property        ' The player's entity
     Private ReadOnly Property OpponentEntity As Entity
         Get
             ' Return the Entity representing the player
-            Return Entities.FirstOrDefault(Function(x) x.IsOpponent())
+            Try
+                Return Entities.First(Function(x) x.IsOpponent())
+            Catch
+                Return Nothing
+            End Try
         End Get
     End Property      ' The opponent entity
 
@@ -73,14 +82,14 @@ Public Class HDTVoice
         ' Write basic system information to logfile
 
         writeLog("HDT-Voice {0}.{1} ({2}) | {3}x{4}", My.Application.Info.Version.Major, My.Application.Info.Version.Minor, My.Computer.Info.OSFullName, Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height)
-        writeLog("Initializing speech recognition object")
+        writeLog("Initializing Speech Recognition Engine")
 
         ' Attempt to initialize speech recognition
         Try
 
             Dim rec As IReadOnlyCollection(Of RecognizerInfo) = SpeechRecognitionEngine.InstalledRecognizers
             If rec.Count > 0 Then
-                writeLog("Installed recognizers: {0}", rec.Count)
+                writeLog("Detected installed recognizers: {0}", rec.Count)
                 For Each e In rec
                     writeLog(e.Culture.Name)
                 Next
@@ -96,7 +105,7 @@ Public Class HDTVoice
             recogVoice.InitialSilenceTimeout = New TimeSpan(0, 0, 3)
             recogVoice.EndSilenceTimeout = New TimeSpan(0, 0, 0, 0, 500)
             recogVoice.EndSilenceTimeoutAmbiguous = New TimeSpan(0, 0, 0, 0, 500)
-            writeLog("Successfuly started speech recognition")
+            writeLog("Successfully initialized Speech Recognition Engine")
         Catch ex As Exception
             writeLog("Error initializing speech recognition: {0}", ex.Message)
             MsgBox("An error occurred initializing speech recognition: " & vbNewLine & ex.Message, vbOKOnly + vbCritical, "HDT-Voice")
@@ -161,8 +170,6 @@ Public Class HDTVoice
             writeLog("Updated opponent ID to {0}", intOpponentID)
         End If
 
-
-        GrammarEngine.StartNewGame()    ' Initialize GrammarEngine
         updateRecognizer()              ' Update recognizer
     End Sub ' Runs when a new game is started
 
@@ -222,7 +229,8 @@ Public Class HDTVoice
 
             recogVoice.LoadGrammar(GrammarEngine.MulliganGrammar)
         Else
-            recogVoice.LoadGrammar(GrammarEngine.GameGrammar)
+            Dim gg = GrammarEngine.GameGrammar
+            recogVoice.LoadGrammar(gg)
         End If
 
         boolUpdating = False
@@ -238,7 +246,7 @@ Public Class HDTVoice
         Dim pttHotkey = Keys.LShiftKey
         Do
             If Not Core.Game.IsRunning Then
-                writeLog("Hearthstone not running, stopping recognizer...")
+                writeLog("Hearthstone game not running, stopping recognizer...")
                 sreListen = False
                 recogVoice.RecognizeAsyncCancel()
                 Do Until Core.Game.IsRunning
@@ -561,6 +569,8 @@ Public Class HDTVoice
 
             Case "quest log"
                 Mouse.MoveTo(21, 87)
+                Mouse.SendClick(Mouse.Buttons.Left)
+            Case "click"
                 Mouse.SendClick(Mouse.Buttons.Left)
 
             Case "cancel"

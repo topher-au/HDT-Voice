@@ -256,4 +256,19 @@ Public Class Mouse
 
         Sleep(100)
     End Sub
+    Public ReadOnly Property HSUISize As Size
+        Get
+            Dim hWndHS As IntPtr = FindWindow(Nothing, "Hearthstone")
+            Dim rectHS As RECT
+            GetWindowRect(hWndHS, rectHS)
+
+            Dim windowWidth = rectHS.Right - rectHS.Left
+            Dim uiHeight = rectHS.Bottom - rectHS.Top
+            Dim uiWidth = ((uiHeight) / 3) * 4 ' A 4:3 square in the center
+
+            Dim UISize As New Size(uiWidth, uiHeight)
+            Return UISize
+        End Get
+    End Property
 End Class
+

@@ -86,6 +86,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HDTVoice\HDTGrammarEngine.vb" />
+    <Compile Include="HDTVoice\HDTMinionOverlay.vb" />
     <Compile Include="HDTVoice\HDTMouse.vb" />
     <Compile Include="HDTPlugin\configMain.xaml.vb">
       <DependentUpon>configMain.xaml</DependentUpon>

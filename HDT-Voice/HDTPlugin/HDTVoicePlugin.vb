@@ -15,7 +15,7 @@ Public Class HDTVoicePlugin
 
     'Some code is based on code found in HDT Compatibility Window
 
-    Public Shared PluginVersion As New Version(0, 7, 5)
+    Public Shared PluginVersion As New Version(0, 7, 6)
 
     Private createdSettings, createdUpdateNews As Boolean
     Private configRecog As configRecog
