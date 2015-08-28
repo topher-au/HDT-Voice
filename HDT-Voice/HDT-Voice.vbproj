@@ -85,6 +85,7 @@
     <Import Include="System.Threading.Tasks" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HDTVoice\GrammarEngine2.vb" />
     <Compile Include="HDTVoice\HDTGrammarEngine.vb" />
     <Compile Include="HDTVoice\HDTMinionOverlay.vb" />
     <Compile Include="HDTVoice\HDTMouse.vb" />
@@ -151,7 +152,9 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy /Y "$(TargetPath)" "C:\Hearthstone\Hearthstone Deck Tracker\plugins"</PostBuildEvent>
+    <PostBuildEvent>copy /Y "$(TargetPath)" "C:\Hearthstone\Hearthstone Deck Tracker\plugins"
+del $(ProjectName).zip
+cmd /C start "Compressing DLL" "C:\Program Files\7-zip\7z.exe" a $(ProjectName).zip $(TargetFileName)</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

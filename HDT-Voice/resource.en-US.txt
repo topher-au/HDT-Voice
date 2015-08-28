@@ -1,0 +1,2 @@
+AUTOLISTEN=Start listening when Hearthstone is launched
+SHOWNOTIFICATION=Show notification popup

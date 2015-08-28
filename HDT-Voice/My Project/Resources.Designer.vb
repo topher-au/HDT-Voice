@@ -61,20 +61,65 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to card {0}.
+        '''  Looks up a localized string similar to card.
         '''</summary>
-        Friend ReadOnly Property cardGrammar() As String
+        Friend ReadOnly Property CARD() As String
             Get
-                Return ResourceManager.GetString("cardGrammar", resourceCulture)
+                Return ResourceManager.GetString("CARD", resourceCulture)
             End Get
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to minion {0}.
+        '''  Looks up a localized string similar to my,friendly.
         '''</summary>
-        Friend ReadOnly Property minionGrammar() As String
+        Friend ReadOnly Property FRIENDLY() As String
             Get
-                Return ResourceManager.GetString("minionGrammar", resourceCulture)
+                Return ResourceManager.GetString("FRIENDLY", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to hero,face.
+        '''</summary>
+        Friend ReadOnly Property HERO() As String
+            Get
+                Return ResourceManager.GetString("HERO", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to hero power.
+        '''</summary>
+        Friend ReadOnly Property HEROPOWER() As String
+            Get
+                Return ResourceManager.GetString("HEROPOWER", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to minion.
+        '''</summary>
+        Friend ReadOnly Property MINION() As String
+            Get
+                Return ResourceManager.GetString("MINION", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to enemy,opposing,opponent.
+        '''</summary>
+        Friend ReadOnly Property OPPOSING() As String
+            Get
+                Return ResourceManager.GetString("OPPOSING", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to play.
+        '''</summary>
+        Friend ReadOnly Property PLAYCARD() As String
+            Get
+                Return ResourceManager.GetString("PLAYCARD", resourceCulture)
             End Get
         End Property
         
