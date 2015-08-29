@@ -4,7 +4,7 @@ Imports Hearthstone_Deck_Tracker.Hearthstone
 Imports Hearthstone_Deck_Tracker.API
 Imports Hearthstone_Deck_Tracker.Enums
 Imports Hearthstone_Deck_Tracker.Hearthstone.Entities
-Public Class GrammarEngine2
+Public Class HDTGrammarEngine
 
     Private friendlyID As Integer = 0
     Private opposingID As Integer = 0
@@ -12,7 +12,6 @@ Public Class GrammarEngine2
     Private friendlyNames As Choices = ResChoice("FRIENDLY")
     Private opposingNames As Choices = ResChoice("OPPOSING")
     Private heroNames As Choices = ResChoice("HERO")
-
 
     Public Function MulliganGrammar() As Grammar
         CheckGameState()
@@ -35,6 +34,7 @@ Public Class GrammarEngine2
         returnGrammar.Name = Reflection.MethodBase.GetCurrentMethod.Name.ToString
         Return returnGrammar
     End Function
+
     Public Function PlayCardGrammar() As Grammar
         CheckGameState()
         Dim finalChoices As New Choices

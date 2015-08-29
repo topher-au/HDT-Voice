@@ -91,7 +91,6 @@
     <Compile Include="HDTVoice\formEnterCommand.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="HDTVoice\GrammarEngine2.vb" />
     <Compile Include="HDTVoice\HDTGrammarEngine.vb" />
     <Compile Include="HDTVoice\HDTMinionOverlay.vb" />
     <Compile Include="HDTVoice\HDTMouse.vb" />

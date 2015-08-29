@@ -39,7 +39,7 @@ Public Class HDTVoice
     Private intPlayerID As Integer = 0
     Private intOpponentID As Integer = 0
 
-    Public Shared GrammarEngine As New GrammarEngine2
+    Public Shared GrammarEngine As New HDTGrammarEngine
     Public Shared Mouse As New Mouse
 
     'Properties
