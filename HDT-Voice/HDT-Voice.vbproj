@@ -85,6 +85,12 @@
     <Import Include="System.Threading.Tasks" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HDTVoice\formEnterCommand.Designer.vb">
+      <DependentUpon>formEnterCommand.vb</DependentUpon>
+    </Compile>
+    <Compile Include="HDTVoice\formEnterCommand.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="HDTVoice\GrammarEngine2.vb" />
     <Compile Include="HDTVoice\HDTGrammarEngine.vb" />
     <Compile Include="HDTVoice\HDTMinionOverlay.vb" />
@@ -116,6 +122,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="HDTVoice\formEnterCommand.resx">
+      <DependentUpon>formEnterCommand.vb</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="My Project\Resources.resx">
       <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.vb</LastGenOutput>

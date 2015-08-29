@@ -15,7 +15,7 @@ Public Class HDTVoicePlugin
 
     'Some code is based on code found in HDT Compatibility Window
 
-    Public Shared PluginVersion As New Version(0, 7, 6)
+    Public Shared PluginVersion As New Version(0, 8, 0)
 
     Private createdSettings, createdUpdateNews As Boolean
     Private configRecog As configRecog
@@ -154,8 +154,10 @@ Public Class HDTVoicePlugin
     Public Sub CreateUpdateNews()
         ' Checks for an update and adds a news item if there wasn't one
         Dim gh As New Github
+        Logger.WriteLine("Checking for HDT-Voice update...")
         Dim newVer = gh.CheckForUpdate("topher-au", "HDT-Voice", HDTVoicePlugin.PluginVersion)
         If Not IsNothing(newVer) Then
+            Logger.WriteLine("New version found!")
             Dim newsBar As StatusBar = Nothing
 
             Dim TopRow As RowDefinition = Nothing
@@ -214,6 +216,7 @@ Public Class HDTVoicePlugin
             configMain.buttonUpdate.Content = String.Format("Version {0} Now Available", newVer.tag_name)
             configMain.buttonUpdate.Visibility = System.Windows.Visibility.Visible
         Else
+            Logger.WriteLine("No newer version found.")
             configMain.buttonUpdate.Visibility = System.Windows.Visibility.Hidden
             createdUpdateNews = True
         End If

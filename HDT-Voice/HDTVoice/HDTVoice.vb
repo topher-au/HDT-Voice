@@ -226,16 +226,24 @@ Public Class HDTVoice
         End If
 
         If Not Core.Game.IsMulliganDone Then
-
             recogVoice.LoadGrammar(GrammarEngine.MulliganGrammar)
-        Else
-            Dim gg = GrammarEngine.GameGrammar
-            recogVoice.LoadGrammar(gg)
+            boolUpdating = False
+            Return
         End If
+
+        recogVoice.LoadGrammar(GrammarEngine.PlayCardGrammar)
+        recogVoice.LoadGrammar(GrammarEngine.AttackTargetGrammar)
+        recogVoice.LoadGrammar(GrammarEngine.UseHeroPowerGrammar)
+        recogVoice.LoadGrammar(GrammarEngine.ClickGrammar)
+        recogVoice.LoadGrammar(GrammarEngine.TargetGrammar)
+        recogVoice.LoadGrammar(GrammarEngine.EndTurnGrammar)
+        recogVoice.LoadGrammar(GrammarEngine.ChooseGrammar)
+        recogVoice.LoadGrammar(GrammarEngine.EmoteGrammar)
+
 
         boolUpdating = False
     End Sub ' Handles updating the grammar between commands
-    Public Sub onSpeechRecognitionRejected() Handles recogVoice.SpeechRecognitionRejected
+    Public Sub onSpeechRecognitionRejected(sender As Object, e As SpeechRecognitionRejectedEventArgs) Handles recogVoice.SpeechRecognitionRejected
         ' If recognition fails, refresh Grammar
 
         updateRecognizer()
@@ -243,10 +251,12 @@ Public Class HDTVoice
     End Sub
     Public Sub hotkeyWorker_DoWork() Handles workerHotkey.DoWork
         Dim toggleHotkey = Keys.F12
+
         Dim pttHotkey = Keys.LShiftKey
         Do
+            ' Check if the game is running and stop/start recognition as necessary
             If Not Core.Game.IsRunning Then
-                writeLog("Hearthstone game not running, stopping recognizer...")
+                writeLog("Hearthstone not running, stopping recognizer...")
                 sreListen = False
                 recogVoice.RecognizeAsyncCancel()
                 Do Until Core.Game.IsRunning
@@ -254,12 +264,84 @@ Public Class HDTVoice
                 Loop
                 writeLog("Hearthstone started, starting recognizer...")
                 updateRecognizer()
+                Do Until recogVoice.Grammars.Count > 0
+
+                Loop
                 recogVoice.RecognizeAsync(RecognizeMode.Multiple)
                 If My.Settings.boolListenAtStartup Then
                     sreListen = True
                 End If
             End If
-            If IsHearthstoneActive() Then
+
+            'If the game is not active, do not process any hotkeys
+            If Not IsHearthstoneActive() Then
+                Sleep(500)
+                Continue Do
+            End If
+
+            'Debug hotkeys
+            If Debugger.IsAttached Then
+                Dim reloadGrammarHotkey = Keys.F11      'Reload grammar
+                Dim cancelAsyncHotkey = Keys.F10        'Stop recognition
+                Dim startAsyncHotkey = Keys.F9          'Start recognition
+                Dim emulateSpeechHotkey = Keys.F1       'Emulate speech
+
+                If GetAsyncKeyState(emulateSpeechHotkey) <> 0 Then
+
+                    Dim debugInput As New formEnterCommand
+                    debugInput.TopMost = True
+                    If debugInput.ShowDialog = DialogResult.OK Then
+                        recogVoice.RecognizeAsyncCancel()
+                        Do Until recogVoice.AudioState = AudioState.Stopped
+                        Loop
+                        recogVoice.SetInputToNull()
+                        Dim emuSpeech As String = debugInput.textCommand.Text
+                        AppActivate("Hearthstone")
+                        Sleep(100)
+                        If Not emuSpeech = String.Empty Then
+                            recogVoice.EmulateRecognize(emuSpeech)
+                        End If
+                        Sleep(500)
+                        recogVoice.SetInputToDefaultAudioDevice()
+                        recogVoice.RecognizeAsync()
+
+
+                    End If
+
+                    Continue Do
+                End If
+
+
+                If GetAsyncKeyState(reloadGrammarHotkey) <> 0 Then
+                        PopupNotification("Updating recognizer...")
+                        updateRecognizer()
+                        Sleep(500)
+                        Continue Do
+                    End If
+
+                    If GetAsyncKeyState(cancelAsyncHotkey) <> 0 Then
+                        Try
+                            PopupNotification("Cancelling async listener...")
+                            recogVoice.RecognizeAsyncCancel()
+                            Sleep(500)
+                            Continue Do
+                        Catch ex As Exception
+                            PopupNotification("Cancellation failed")
+                            Continue Do
+                        End Try
+                    End If
+                    If GetAsyncKeyState(startAsyncHotkey) <> 0 Then
+                        Try
+                            PopupNotification("Starting async listener...")
+                            recogVoice.RecognizeAsync()
+                            Sleep(500)
+                        Catch ex As Exception
+                            PopupNotification("Failed to start listener")
+                            Continue Do
+                        End Try
+                    End If
+                End If
+                If IsHearthstoneActive() Then
                 If My.Settings.boolToggleOrPtt Then ' Push-to-talk
                     Dim hotkeyState As Short = GetAsyncKeyState(pttHotkey)
                     If hotkeyState <> 0 Then
@@ -300,9 +382,6 @@ Public Class HDTVoice
     'Action processor
     Public Sub actionWorker_DoWork() Handles workerActions.DoWork
         Do
-            Do While boolUpdating
-                Sleep(10)            ' Wait if recognizer is updating
-            Loop
             If listActions.Count > 0 Then
                 Dim currentAction As String = listActions.Item(0).Result.Text
                 currentAction = currentAction.Substring(0, 1).ToUpper & currentAction.Substring(1)
@@ -310,65 +389,91 @@ Public Class HDTVoice
                 PopupNotification(String.Format("""{0}""", currentAction))
                 ProcessAction(listActions.Item(0))       ' Process action
                 listActions.Remove(listActions.Item(0))   ' Remove from list
-                Sleep(100)
                 updateRecognizer()                      ' Update recognizer
-                Sleep(500)
+
             End If
             Sleep(50)
         Loop
     End Sub ' A background worker that loops, continuously processing any actions in the action list
     Public Sub ProcessAction(e As SpeechRecognizedEventArgs)
-        ' First, check for debugger only commands
-
-        ' Check if the action is a menu action, and if we're in the menu
         If e.Result.Semantics.ContainsKey("menu") And Core.Game.IsInMenu Then
             doMenu(e)
         End If
 
-        ' Check if the action is a game action and invoke the appropriate subroutine to handle it
-        If e.Result.Semantics.ContainsKey("action") Then
-            Select Case e.Result.Semantics("action").Value
-                Case "mulligan"     ' Handle mulligan stage commands
-                    doMulligan(e)
+        Select Case e.Result.Semantics.First.Key
+            Case "mulligan"
+                Dim mulliganTarget As String = e.Result.Semantics("mulligan").Item("card").Value
 
-                Case "hero"         ' Use hero power
-                    doHero(e)
-
-                Case "play"         ' Play a card from hand
-                    doPlay(e)
-
-                Case "attack"       ' Attack with a minion
-                    doAttack(e)
-
-                Case "click"        ' Send a click to an entity
-                    doClick(e)
-
-                Case "target"       ' Hover the cursor over a target
-                    doTarget(e)
-
-                Case "say"          ' Do an emote
-                    doSay(e)
-
-                Case "choose"       ' Choose an option (x of y)
-                    doChoose(e)
-
-                Case "cancel"       ' Send right click
-                    Mouse.SendClick(Mouse.Buttons.Right)
-
-                Case "end"          ' Click End Turn
-                    Mouse.MoveTo(91, 46)
+                If mulliganTarget = My.Resources.MULLIGANCONFIRM Then ' Confirm selection
+                    Mouse.MoveTo(50, 80)
                     Mouse.SendClick(Mouse.Buttons.Left)
-            End Select
-        End If
+                Else    ' Card to mulligan specified
+                    Dim cardEntity = GrammarEngine.GetEntityFromSemantic(mulliganTarget)
+                    Dim targetNum = cardEntity.GetTag(GAME_TAG.ZONE_POSITION)
+                    Mouse.MoveToMulligan(targetNum)
+                    Mouse.SendClick(Mouse.Buttons.Left)
+                End If
+
+            Case "play"
+                Dim myCard As String = e.Result.Semantics("play").Value
+                Dim playTarget As String = Nothing
+                If e.Result.Semantics.ContainsKey("target") Then
+                    playTarget = e.Result.Semantics("target").Value
+                End If
+                PlayCard(myCard, playTarget)
+
+            Case "attack"
+                Dim attack1 As String = e.Result.Semantics("attack").Value
+                Dim attack2 As String = e.Result.Semantics("target").Value
+                If My.Settings.boolQuickPlay Then
+                    AttackTarget(attack1, attack2)
+                Else
+                    AttackTarget(attack2, attack1)
+                End If
+
+            Case "hero"
+                If e.Result.Semantics.ContainsKey("target") Then
+                    Dim heroTarget As String = e.Result.Semantics("target").Value
+                    UseHeroPower(heroTarget)
+                Else
+                    UseHeroPower()
+                    Mouse.SendClick(Mouse.Buttons.Left)
+                End If
+
+            Case "click"
+                Select Case e.Result.Semantics("click").Value
+                    Case "left"
+                        Mouse.SendClick(Mouse.Buttons.Left)
+                    Case "right"
+                        Mouse.SendClick(Mouse.Buttons.Right)
+                    Case Else
+                        Mouse.MoveToEntity(e.Result.Semantics("click").Value)
+                        Mouse.SendClick(Mouse.Buttons.Left)
+                End Select
+
+            Case "target"
+                Mouse.MoveToEntity(e.Result.Semantics("target").Value)
+
+            Case "choose"
+                Mouse.MoveToOption(e.Result.Semantics("choose").Value, e.Result.Semantics("max").Value)
+
+            Case "emote"
+                DoEmote(e)
+
+            Case "end"
+                Mouse.MoveTo(91, 46)
+                Mouse.SendClick(Mouse.Buttons.Left)
+
+        End Select
+
+
+
+        Exit Sub
+
+
     End Sub
 
-    'Voice command handlers
-    Private Sub doChoose(e As SpeechRecognizedEventArgs)
-        Dim optNum = e.Result.Semantics("option").Value
-        Dim optmax = e.Result.Semantics("max").Value
-        Mouse.MoveToOption(optNum, optmax)
-    End Sub 'handles selecting an option
-    Private Sub doSay(e As SpeechRecognizedEventArgs)
+    Private Sub DoEmote(e As SpeechRecognizedEventArgs)
         Dim emote = e.Result.Semantics("emote").Value
         Select Case emote
             Case "thanks"
@@ -409,27 +514,7 @@ Public Class HDTVoice
                 Mouse.SendClick(Mouse.Buttons.Left)
         End Select
     End Sub 'handles emotes
-    Private Sub doClick(e As SpeechRecognizedEventArgs)
-        If e.Result.Semantics.ContainsKey("heropower") Then 'target hero or hero power
-            Dim x, y
-            If e.Result.Semantics("herotarget").Value = "friendly" Then y = 80 Else y = 20
-            If e.Result.Semantics("heropower").Value = "hero" Then x = 50 Else x = 60
-            Mouse.MoveTo(x, y)
-        End If
-        If e.Result.Semantics.ContainsKey("card") Then
-            Dim targetName = e.Result.Semantics("card").Value
-            Mouse.MoveToEntity(targetName)
-        End If
-        If e.Result.Semantics.ContainsKey("friendly") Then
-            Dim targetName = e.Result.Semantics("friendly").Value
-            Mouse.MoveToEntity(targetName)
-        End If
-        If e.Result.Semantics.ContainsKey("opposing") Then
-            Dim targetName = e.Result.Semantics("opposing").Value
-            Mouse.MoveToEntity(targetName)
-        End If
-        Mouse.SendClick(Mouse.Buttons.Left)
-    End Sub 'handle clicking mouse
+
     Private Sub doMenu(e As SpeechRecognizedEventArgs)
         Select Case e.Result.Semantics("menu").Value
             Case "play"
@@ -496,7 +581,7 @@ Public Class HDTVoice
             Case "arena"
                 Mouse.MoveTo(50, 45)
                 Mouse.SendClick(Mouse.Buttons.Left)
-            Case "buy arena with gold"
+            Case "buy arena With gold"
                 Mouse.MoveTo(60, 62)
                 Mouse.SendClick(Mouse.Buttons.Left)
             Case "cancel arena"
@@ -598,104 +683,54 @@ Public Class HDTVoice
                 Mouse.SendClick(Mouse.Buttons.Left)
         End Select
     End Sub ' handle menu commands
-    Private Sub doHero(e As SpeechRecognizedEventArgs)
-        If e.Result.Semantics.ContainsKey("friendly") Then
-            Dim friendlyID = e.Result.Semantics("friendly").Value
+    Private Sub UseHeroPower(Optional Target As String = Nothing)
+        If Not Target Is Nothing Then
             Mouse.MoveTo(62, 76)
             Mouse.StartDrag()
-            Mouse.MoveToEntity(friendlyID)
-            Mouse.EndDrag()
-        ElseIf e.Result.Semantics.ContainsKey("opposing") Then
-            Dim opposingID = e.Result.Semantics("opposing").Value
-            Mouse.MoveTo(62, 76)
-            Mouse.StartDrag()
-            Mouse.MoveToEntity(opposingID)
+            Mouse.MoveToEntity(Target)
             Mouse.EndDrag()
         Else
             Mouse.MoveTo(62, 76)
             Mouse.SendClick(Mouse.Buttons.Left)
         End If
-    End Sub 'handle hero powers
-    Private Sub doAttack(e As SpeechRecognizedEventArgs)
+    End Sub
+    Private Sub AttackTarget(Friendly As String, Opposing As String)
+        Mouse.MoveToEntity(Friendly)
+        Mouse.StartDrag()
+        Mouse.MoveToEntity(Opposing)
+        Mouse.EndDrag()
+    End Sub
+    Private Sub PlayCard(SemanticCard As String, Optional SemanticTarget As String = Nothing)
 
-        If e.Result.Semantics.ContainsKey("opposing") Then ' Target is a minion
-            Dim myMinion = e.Result.Semantics("friendly").Value
-            Dim targetMinion = e.Result.Semantics("opposing").Value
-            Mouse.MoveToEntity(myMinion)
-            Mouse.StartDrag()
-            Mouse.MoveToEntity(targetMinion)
-            Mouse.EndDrag()
-        Else ' Not a minion, attack face
-            Dim myMinion = e.Result.Semantics("friendly").Value
-            Mouse.MoveToEntity(myMinion)
-            Mouse.StartDrag()
-            Mouse.MoveTo(50, 20)
-            Mouse.EndDrag()
-        End If
-    End Sub 'handle attacking
-    Private Sub doPlay(e As SpeechRecognizedEventArgs)
+        Dim cardEntity = GrammarEngine.GetEntityFromSemantic(SemanticCard)
+        Dim cardType = cardEntity.Card.Type
 
-        Dim myCard = e.Result.Semantics("card").Value
-        Dim cardType = GrammarEngine.GetEntityFromSemantic(myCard).Card.Type
-
-        If e.Result.Semantics.ContainsKey("friendly") Then 'Play card to friendly target
-            Dim destTarget = e.Result.Semantics("friendly").Value
-            If cardType = "Minion" Then 'Card is a minion
-                Mouse.DragToTarget(myCard, destTarget, -5) 'Play to the left of friendly target
-            Else 'Card is a spell
-                Mouse.DragToTarget(myCard, destTarget) 'Direct drag to target
-            End If
-
-
-        ElseIf e.Result.Semantics.ContainsKey("opposing") Then 'Play card to opposing target
-            Dim targetName = e.Result.Semantics("opposing").Value
-            Mouse.DragToTarget(myCard, targetName)
-        Else 'Play card with no target
+        If SemanticTarget Is Nothing Then
+            'play card with no target
             If cardType = "Minion" Then
-                Mouse.MoveToEntity(myCard)
+                Mouse.MoveToEntity(SemanticCard)
                 Mouse.StartDrag()
                 Mouse.MoveTo(85, 55) 'play to right of board
                 Mouse.EndDrag()
             Else
-                Mouse.MoveToEntity(myCard)
+                Mouse.MoveToEntity(SemanticCard)
                 Mouse.StartDrag()
                 Mouse.MoveTo(40, 75) 'play to board
                 Mouse.EndDrag()
             End If
-
+        Else
+            'Play card with target
+            Dim TargetEntity As Entity = GrammarEngine.GetEntityFromSemantic(SemanticTarget)
+            If TargetEntity.GetTag(GAME_TAG.CONTROLLER) = intPlayerID And TargetEntity.IsMinion And cardEntity.IsMinion Then
+                ' pLay to left of minion
+                Mouse.DragToTarget(SemanticCard, SemanticTarget, -5)
+            Else
+                ' PLay directly to target
+                Mouse.DragToTarget(SemanticCard, SemanticTarget)
+            End If
         End If
     End Sub
-    Private Sub doMulligan(e As SpeechRecognizedEventArgs)
-        If e.Result.Semantics.ContainsKey("card") Then
-            Dim semanticValue = e.Result.Semantics("card").Value
-            Dim targetNum = GrammarEngine.GetEntityFromSemantic(semanticValue).GetTag(GAME_TAG.ZONE_POSITION)
-            Mouse.MoveToMulligan(targetNum)
-            Mouse.SendClick(Mouse.Buttons.Left)
-        Else
-            Mouse.MoveTo(50, 80)
-            Mouse.SendClick(Mouse.Buttons.Left)
-        End If
-    End Sub 'handle mulligan
-    Private Sub doTarget(e As SpeechRecognizedEventArgs)
-        If e.Result.Semantics.ContainsKey("heropower") Then 'target hero or hero power
-            Dim x, y
-            If e.Result.Semantics("herotarget").Value = "friendly" Then y = 80 Else y = 20
-            If e.Result.Semantics("heropower").Value = "hero" Then x = 50 Else x = 60
-            Mouse.MoveTo(x, y)
-        End If
-        If e.Result.Semantics.ContainsKey("card") Then 'target card
-            Dim targetName = e.Result.Semantics("card").Value
-            Mouse.MoveToEntity(targetName)
-        End If
-        If e.Result.Semantics.ContainsKey("friendly") Then 'target friendly
-            Dim targetName = e.Result.Semantics("friendly").Value
-            Mouse.MoveToEntity(targetName)
-        End If
-        If e.Result.Semantics.ContainsKey("opposing") Then 'target opposing
-            Dim targetName = e.Result.Semantics("opposing").Value
-            Mouse.MoveToEntity(targetName)
-        End If
-    End Sub 'handle targeting cursor
+
 
     'Miscellaneous functions
     Public Function IsHearthstoneActive() As Boolean
