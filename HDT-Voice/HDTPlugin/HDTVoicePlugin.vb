@@ -191,7 +191,7 @@ Public Class HDTVoicePlugin
 
                     Dim newsLink As New Hyperlink
                     newsLink.NavigateUri = New Uri("https://www.github.com/topher-au/HDT-Voice/releases/latest")
-                    newsLink.Inlines.Add(New Run(String.Format("HDT-Voice version {0} is available now!", HDTVoicePlugin.PluginVersion.ToString)))
+                    newsLink.Inlines.Add(New Run(String.Format("HDT-Voice version {0} is available now!", newVer.tag_name)))
                     newsLink.Foreground = New SolidColorBrush(Colors.White)
                     AddHandler newsLink.RequestNavigate, Sub()
                                                              Process.Start(newsLink.NavigateUri.ToString)
