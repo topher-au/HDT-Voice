@@ -56,7 +56,7 @@ Namespace My
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-         Global.System.Configuration.DefaultSettingValueAttribute("90")>  _
+         Global.System.Configuration.DefaultSettingValueAttribute("80")>  _
         Public Property intThreshold() As Integer
             Get
                 Return CType(Me("intThreshold"),Integer)
@@ -92,7 +92,7 @@ Namespace My
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-         Global.System.Configuration.DefaultSettingValueAttribute("0")>  _
+         Global.System.Configuration.DefaultSettingValueAttribute("1")>  _
         Public Property intNotificationPos() As Integer
             Get
                 Return CType(Me("intNotificationPos"),Integer)
@@ -128,7 +128,7 @@ Namespace My
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-         Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
+         Global.System.Configuration.DefaultSettingValueAttribute("False")>  _
         Public Property boolListenAtStartup() As Boolean
             Get
                 Return CType(Me("boolListenAtStartup"),Boolean)
@@ -140,7 +140,7 @@ Namespace My
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-         Global.System.Configuration.DefaultSettingValueAttribute("False")>  _
+         Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
         Public Property boolToggleOrPtt() As Boolean
             Get
                 Return CType(Me("boolToggleOrPtt"),Boolean)

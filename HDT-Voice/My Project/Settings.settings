@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="intThreshold" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">90</Value>
+      <Value Profile="(Default)">80</Value>
     </Setting>
     <Setting Name="boolDebugLog" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
@@ -12,7 +12,7 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="intNotificationPos" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">0</Value>
+      <Value Profile="(Default)">1</Value>
     </Setting>
     <Setting Name="boolQuickPlay" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
@@ -21,10 +21,10 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="boolListenAtStartup" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
+      <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="boolToggleOrPtt" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
+      <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="boolRecognizedAudio" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
