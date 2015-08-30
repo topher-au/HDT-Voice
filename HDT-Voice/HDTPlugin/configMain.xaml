@@ -36,6 +36,9 @@
                     <DockPanel Margin="10">
                         <CheckBox Name="checkDebugLog" Content="Enable debug logfile" />
                     </DockPanel>
+                    <DockPanel Margin="10">
+                        <CheckBox Name="checkHearthstoneActive" Content="Don't send commands unless Hearthstone is active" />
+                    </DockPanel>
                     <DockPanel Margin="20">
                         <Button Name="buttonUpdate" Content="Check for Updates" Height="48"/>
                     </DockPanel>

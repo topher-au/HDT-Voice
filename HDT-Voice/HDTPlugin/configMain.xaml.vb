@@ -23,6 +23,9 @@ Public Class configMain
         checkDebugLog.IsChecked = My.Settings.boolDebugLog
         AddHandler checkDebugLog.Click, AddressOf SaveSettings
 
+        checkHearthstoneActive.IsChecked = My.Settings.boolHearthActive
+        AddHandler checkHearthstoneActive.Click, AddressOf SaveSettings
+
         AddHandler buttonUpdate.Click, AddressOf ClickUpdateButton
 
 
@@ -35,6 +38,7 @@ Public Class configMain
         My.Settings.intNotificationSize = comboNotificationSize.SelectedIndex 
         My.Settings.boolSmoothCursor = checkSmoothMouse.IsChecked
         My.Settings.boolDebugLog = checkDebugLog.IsChecked
+        My.Settings.boolHearthActive = checkHearthstoneActive.IsChecked
         My.Settings.Save()
 
         comboNotificationSize.IsEnabled = checkShowNotification.IsChecked

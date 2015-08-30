@@ -19,18 +19,18 @@ Public Class HDTGrammarEngine
         Dim cardsInHand = GetCardsInHand()
         Dim mulliganChoices As New Choices
 
+        Dim mulliBuilder As New GrammarBuilder
+        If Not My.Settings.boolQuickPlay Then _
+                mulliBuilder.Append(ResChoice("MULLIGANCLICK"))
+
         If cardsInHand.Count > 0 Then
             Dim myHand = FriendlyHandChoices()
-            Dim mulliganCard As New GrammarBuilder
-            If Not My.Settings.boolQuickPlay Then _
-                mulliganCard.Append(ResChoice("MULLIGANCLICK"))
-            mulliganCard.Append(New SemanticResultKey("card", FriendlyHandChoices))
-            mulliganChoices.Add(New SemanticResultKey("mulligan", mulliganCard))
+            mulliganChoices.Add(New SemanticResultKey("mulligan", myHand))
         End If
+        mulliganChoices.Add(ResChoice("MULLIGANCONFIRM"))
+        mulliBuilder.Append(New SemanticResultKey("mulligan", mulliganChoices))
 
-        mulliganChoices.Add(New SemanticResultKey("mulligan", ResChoice("MULLIGANCONFIRM")))
-
-        Dim returnGrammar As New Grammar(mulliganChoices)
+        Dim returnGrammar As New Grammar(mulliBuilder)
         returnGrammar.Name = Reflection.MethodBase.GetCurrentMethod.Name.ToString
         Return returnGrammar
     End Function

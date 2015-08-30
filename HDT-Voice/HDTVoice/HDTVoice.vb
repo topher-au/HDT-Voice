@@ -16,6 +16,10 @@ Public Class HDTVoice
     Private Declare Function GetForegroundWindow Lib "user32" () As System.IntPtr
     Private Declare Auto Function GetWindowText Lib "user32" (ByVal hWnd As System.IntPtr, ByVal lpString As System.Text.StringBuilder, ByVal cch As Integer) As Integer
     Private Declare Function GetAsyncKeyState Lib "user32" (ByVal vkey As Integer) As Short
+    Public Declare Auto Function GetWindowThreadProcessId Lib "user32" (ByVal hwnd As IntPtr, ByRef lpdwProcessId As IntPtr) As IntPtr
+    Public Declare Function OpenProcess Lib "kernel32" (dwDesiredAccess As Integer, bInheritHandle As Boolean, dwProcessId As Integer) As Long
+    Public Declare Function GetProcessImageFileName Lib "psapi.dll" Alias "GetProcessImageFileNameA" (hProcess As Integer, lpImageFileName As String, nSize As Integer) As Integer
+    Public Declare Function CloseHandle Lib "kernel32" (hObject As Integer) As Integer
 
     ' Speech recognition objects
     Private WithEvents recogVoice As SpeechRecognitionEngine
@@ -134,15 +138,17 @@ Public Class HDTVoice
         workerHotkey.RunWorkerAsync()       ' Start listening for hotkey
         workerActions.RunWorkerAsync()      ' Start action processor
 
-        If My.Settings.boolToggleOrPtt Then ' Push to talk enabled, don't start listening
-            sreListen = False
-            PopupNotification("HDT-Voice loaded (hold Left Shift to speak)", 4000)
-        ElseIf My.Settings.boolListenAtStartup Then ' Start listening
-            sreListen = True
-            PopupNotification("HDT-Voice loaded and enabled (F12 to disable)", 4000)
-        Else 'Don't start listening
-            sreListen = False
-            PopupNotification("HDT-Voice loaded (F12 to enable)", 4000)
+        If canvasOverlay.ActualWidth > 500 Then
+            If My.Settings.boolToggleOrPtt Then ' Push to talk enabled, don't start listening
+                sreListen = False
+                PopupNotification("Speech recognition enabled (push-to-talk)", 4000)
+            ElseIf My.Settings.boolListenAtStartup Then ' Start listening
+                sreListen = True
+                PopupNotification("Speech recognition enabled (F12 to toggle)", 4000)
+            Else 'Don't start listening
+                sreListen = False
+                PopupNotification("Speech recognition disabled (F12 to toggle)", 4000)
+            End If
         End If
     End Sub ' Run when the plugin is first initialized
     Public Sub Unload()
@@ -402,13 +408,11 @@ Public Class HDTVoice
 
         Select Case e.Result.Semantics.First.Key
             Case "mulligan"
-                Dim mulliganTarget As String = e.Result.Semantics("mulligan").Item("card").Value
-
-                If mulliganTarget = My.Resources.MULLIGANCONFIRM Then ' Confirm selection
+                If My.Resources.MULLIGANCONFIRM.Contains(e.Result.Text) Then
                     Mouse.MoveTo(50, 80)
                     Mouse.SendClick(Mouse.Buttons.Left)
-                Else    ' Card to mulligan specified
-                    Dim cardEntity = GrammarEngine.GetEntityFromSemantic(mulliganTarget)
+                Else
+                    Dim cardEntity = GrammarEngine.GetEntityFromSemantic(e.Result.Semantics("mulligan").Value)
                     Dim targetNum = cardEntity.GetTag(GAME_TAG.ZONE_POSITION)
                     Mouse.MoveToMulligan(targetNum)
                     Mouse.SendClick(Mouse.Buttons.Left)
@@ -734,15 +738,37 @@ Public Class HDTVoice
 
     'Miscellaneous functions
     Public Function IsHearthstoneActive() As Boolean
+        If Not My.Settings.boolHearthActive Then Return True
         Dim activeHwnd = GetForegroundWindow()
-        Dim activeWindowText As New System.Text.StringBuilder(32)
-        GetWindowText(activeHwnd, activeWindowText, activeWindowText.Capacity)
-        If activeWindowText.ToString = "Hearthstone" Then
+        Dim winProcess As IntPtr
+        GetWindowThreadProcessId(activeHwnd, winProcess)
+        Dim ProcessFilename As String = GetProcessFilename(winProcess)
+        If ProcessFilename = "Hearthstone.exe" Then
             Return True
         Else
             Return False
         End If
     End Function 'Checks if the hearthstone window is active
+    Private Function GetProcessFilename(ProcessID As Long) As String
+        GetProcessFilename = Nothing
+        Const MAX_PATH = 260
+        Const PROCESS_QUERY_INFORMATION = &H400
+        Const PROCESS_VM_READ = &H10
+
+        Dim strBuffer As String
+        Dim bufferLength As Integer, processHandle As Integer
+        strBuffer = New String(Chr(0), MAX_PATH)
+        processHandle = OpenProcess(PROCESS_QUERY_INFORMATION Or PROCESS_VM_READ, 0, ProcessID)
+        If processHandle Then
+            bufferLength = GetProcessImageFileName(processHandle, strBuffer, MAX_PATH)
+            If bufferLength Then
+                strBuffer = Left$(strBuffer, bufferLength)
+                GetProcessFilename = strBuffer.Substring(strBuffer.LastIndexOf("\") + 1)
+            End If
+            CloseHandle(processHandle)
+        End If
+        Return GetProcessFilename
+    End Function
     Public Sub writeLog(LogLine As String, ParamArray args As Object())
         Dim formatLine As String = String.Format(LogLine, args)
         formatLine = String.Format("HDT-Voice: {0}", formatLine)

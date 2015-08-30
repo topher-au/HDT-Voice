@@ -83,8 +83,11 @@ Public Class HDTVoicePlugin
     End Sub
     Public Sub OnUnload() Implements IPlugin.OnUnload
         My.Settings.Save()
-        voicePlugin.Unload()
-        voicePlugin = Nothing
+        If Not voicePlugin Is Nothing Then
+            voicePlugin.Unload()
+            voicePlugin = Nothing
+        End If
+
         For Each t In FindVisualChildren(Of TreeView)(Helper.OptionsMain)
             For Each ti As TreeViewItem In FindVisualChildren(Of TreeViewItem)(t)
                 If ti.Header = "Voice Control" Then
