@@ -58,10 +58,11 @@ Public Class HDTVoicePlugin
         End Get
     End Property
     Public Sub OnButtonPress() Implements IPlugin.OnButtonPress
+        'Recurse through treeview elements to find HDT-Voice and select it
         Dim tV As TreeView = Nothing
-        For Each t As TreeView In FindVisualChildren(Of TreeView)(Helper.OptionsMain)
-            For Each ti As TreeViewItem In t.Items
-                For Each tic As TreeViewItem In ti.Items
+        For Each t As TreeView In FindVisualChildren(Of TreeView)(Helper.OptionsMain) ' TreeViews in options window
+            For Each ti As TreeViewItem In t.Items ' Main treeview items
+                For Each tic As TreeViewItem In ti.Items ' SubItems
                     If Not tic.Tag Is Nothing Then
                         If tic.Tag.ToString = "HDTVOICESETTINGS" Then
                             ti.Items.Cast(Of TreeViewItem).First().IsSelected = True
@@ -238,6 +239,7 @@ Public Class HDTVoicePlugin
             End Try
             If cc IsNot Nothing Then
                 cc.Content = pane
+                Return
             End If
         Next
 

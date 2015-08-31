@@ -151,11 +151,12 @@ Public Class Mouse
         If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GAME_TAG.CONTROLLER) = PlayerID Then
             Dim minionNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
             Dim totalMinions As Integer = boardFriendly.Count
-            Dim totalWidth = totalMinions * 10
-            Dim minionX = minionNum * 10
+            Dim minionWidth As Double = 29 / 3
+            Dim totalWidth As Double = totalMinions * minionWidth
+            Dim minionX As Double = (minionNum * minionwidth) - (minionWidth / 2)
 
-            Dim minX = 50 - (totalWidth / 2) + minionX - 7 + XOffset
-            MoveTo(minX, 55)
+            Dim cursorX As Integer = 50 - (totalWidth / 2) + minionX + XOffset
+            MoveTo(cursorX, 55)
             Return
         End If
 
@@ -163,13 +164,13 @@ Public Class Mouse
         If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GAME_TAG.CONTROLLER) = OpponentID Then
             Dim minionNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
             Dim totalMinions As Integer = boardOpposing.Count
-            Dim totalWidth = totalMinions * 10
-            Dim minionX = minionNum * 10
+            Dim minionWidth As Double = 29 / 3
+            Dim totalWidth As Double = totalMinions * minionWidth
+            Dim minionX As Double = (minionNum * minionWidth) - (minionWidth / 2)
 
-            Dim minX = 50 - (totalWidth / 2) + minionX - 5 + XOffset
-            MoveTo(minX, 38)
+            Dim cursorX As Integer = 50 - (totalWidth / 2) + minionX + XOffset
+            MoveTo(cursorX, 38)
             Return
-
         End If
 
         'Finally, check whether it is a hero
