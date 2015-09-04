@@ -739,19 +739,23 @@ Public Class HDTVoice
     'Miscellaneous functions
     Public Function IsHearthstoneActive() As Boolean
         If Not My.Settings.boolHearthActive Then Return True
-        Dim activeHwnd = GetForegroundWindow()
-        Dim winProcess As IntPtr
-        GetWindowThreadProcessId(activeHwnd, winProcess)
-        Dim ProcessFilename As String = GetProcessFilename(winProcess)
-        If ProcessFilename = "Hearthstone.exe" Then
+        Try
+            Dim activeHwnd = GetForegroundWindow()
+            Dim winProcess As IntPtr
+            GetWindowThreadProcessId(activeHwnd, winProcess)
+            Dim ProcessFilename As String = GetProcessFilename(winProcess)
+            If ProcessFilename = "Hearthstone.exe" Then
+                Return True
+            Else
+                Return False
+            End If
+        Catch ex As Exception
             Return True
-        Else
-            Return False
-        End If
+        End Try
     End Function 'Checks if the hearthstone window is active
     Private Function GetProcessFilename(ProcessID As Long) As String
         GetProcessFilename = Nothing
-        Const MAX_PATH = 260
+        Const MAX_PATH = 32768
         Const PROCESS_QUERY_INFORMATION = &H400
         Const PROCESS_VM_READ = &H10
 
