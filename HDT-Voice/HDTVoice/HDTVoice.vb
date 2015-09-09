@@ -189,7 +189,7 @@ Public Class HDTVoice
         End If
 
         'If hearthstone is inactive, exit
-        If Not IsHearthstoneActive() Then
+        If Not Mouse.IsHearthstoneActive() Then
             writeLog("Heard command """ & e.Result.Text & """ but Hearthstone was inactive")
             Return
         End If
