@@ -280,7 +280,7 @@ Public Class HDTVoice
             End If
 
             'If the game is not active, do not process any hotkeys
-            If Not IsHearthstoneActive() Then
+            If Not Mouse.IsHearthstoneActive() Then
                 Sleep(500)
                 Continue Do
             End If
@@ -347,7 +347,7 @@ Public Class HDTVoice
                         End Try
                     End If
                 End If
-                If IsHearthstoneActive() Then
+            If Mouse.IsHearthstoneActive() Then
                 If My.Settings.boolToggleOrPtt Then ' Push-to-talk
                     Dim hotkeyState As Short = GetAsyncKeyState(pttHotkey)
                     If hotkeyState <> 0 Then
@@ -735,24 +735,6 @@ Public Class HDTVoice
         End If
     End Sub
 
-
-    'Miscellaneous functions
-    Public Function IsHearthstoneActive() As Boolean
-        If Not My.Settings.boolHearthActive Then Return True
-        Try
-            Dim activeHwnd = GetForegroundWindow()
-            Dim winProcess As IntPtr
-            GetWindowThreadProcessId(activeHwnd, winProcess)
-            Dim ProcessFilename As String = GetProcessFilename(winProcess)
-            If ProcessFilename = "Hearthstone.exe" Then
-                Return True
-            Else
-                Return False
-            End If
-        Catch ex As Exception
-            Return True
-        End Try
-    End Function 'Checks if the hearthstone window is active
     Private Function GetProcessFilename(ProcessID As Long) As String
         GetProcessFilename = Nothing
         Const MAX_PATH = 32768

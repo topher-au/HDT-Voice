@@ -7,10 +7,14 @@ Imports System.Windows.Forms
 Imports System.Drawing
 
 Public Class Mouse
-    Private Declare Function FindWindow Lib "user32" Alias "FindWindowA" (ByVal lpClassName As String, ByVal lpWindowName As String) As IntPtr
+    Private Declare Function GetForegroundWindow Lib "user32" () As System.IntPtr
+    Private Declare Function FindWindow Lib "user32" Alias "FindWindowA" (ByVal lpClassName As String, ByVal lpWindowName As String) As Double
     Private Declare Function GetWindowRect Lib "user32" Alias "GetWindowRect" (ByVal hwnd As IntPtr, ByRef lpRect As RECT) As Integer
     Private Declare Sub mouse_event Lib "user32" (ByVal dwFlags As Integer, ByVal dx As Integer, ByVal dy As Integer, ByVal cButtons As Integer, ByVal dwExtraInfo As IntPtr)
-
+    Public Declare Auto Function GetWindowThreadProcessId Lib "user32" (ByVal hwnd As IntPtr, ByRef lpdwProcessId As Integer) As Integer
+    Public Declare Function OpenProcess Lib "kernel32" (dwDesiredAccess As Integer, bInheritHandle As Boolean, dwProcessId As Integer) As Long
+    Public Declare Function GetProcessImageFileName Lib "psapi.dll" Alias "GetProcessImageFileNameA" (hProcess As Integer, lpImageFileName As String, nSize As Integer) As Integer
+    Public Declare Function CloseHandle Lib "kernel32" (hObject As Integer) As Integer
     Const MOUSE_LEFTDOWN As UInteger = &H2
     Const MOUSE_LEFTUP As UInteger = &H4
     Const MOUSE_RIGHTDOWN As UInteger = &H8
@@ -153,7 +157,7 @@ Public Class Mouse
             Dim totalMinions As Integer = boardFriendly.Count
             Dim minionWidth As Double = 29 / 3
             Dim totalWidth As Double = totalMinions * minionWidth
-            Dim minionX As Double = (minionNum * minionwidth) - (minionWidth / 2)
+            Dim minionX As Double = (minionNum * minionWidth) - (minionWidth / 2)
 
             Dim cursorX As Integer = 50 - (totalWidth / 2) + minionX + XOffset
             MoveTo(cursorX, 55)
@@ -211,10 +215,7 @@ Public Class Mouse
         MoveTo(optionStart + myOption, 50)
     End Sub
     Public Sub MoveTo(X As Integer, Y As Integer)
-        'First, find the Hearthstone window and it's size
-        Dim hWndHS As IntPtr = FindWindow(Nothing, "Hearthstone")
-        Dim rectHS As RECT
-        GetWindowRect(hWndHS, rectHS)
+        Dim rectHS As RECT = GetHSRect()
 
         Dim windowWidth = rectHS.Right - rectHS.Left
         Dim uiHeight = rectHS.Bottom - rectHS.Top
@@ -257,19 +258,51 @@ Public Class Mouse
 
         Sleep(100)
     End Sub
-    Public ReadOnly Property HSUISize As Size
-        Get
-            Dim hWndHS As IntPtr = FindWindow(Nothing, "Hearthstone")
+    Public Function GetHSRect() As RECT
+        Dim fgHwnd As IntPtr = GetForegroundWindow()
+        Dim fgProcessName As String = GetWindowProcessName(fgHwnd)
+        If fgProcessName = "Hearthstone.exe" Then
             Dim rectHS As RECT
-            GetWindowRect(hWndHS, rectHS)
+            GetWindowRect(fgHwnd, rectHS)
+            Return rectHS
+        Else
+            Return Nothing
+        End If
+    End Function
+    Private Function GetWindowProcessName(WindowHandle As Double) As String
+        GetWindowProcessName = Nothing
+        Const MAX_PATH = 32768
+        Const PROCESS_QUERY_INFORMATION = &H400
+        Const PROCESS_VM_READ = &H10
 
-            Dim windowWidth = rectHS.Right - rectHS.Left
-            Dim uiHeight = rectHS.Bottom - rectHS.Top
-            Dim uiWidth = ((uiHeight) / 3) * 4 ' A 4:3 square in the center
-
-            Dim UISize As New Size(uiWidth, uiHeight)
-            Return UISize
-        End Get
-    End Property
+        Dim strBuffer As String
+        Dim bufferLength As Integer, processHandle As Double
+        strBuffer = New String(Chr(0), MAX_PATH)
+        Dim windowProcessID As Integer = Nothing
+        GetWindowThreadProcessId(WindowHandle, windowProcessID)
+        processHandle = OpenProcess(PROCESS_QUERY_INFORMATION Or PROCESS_VM_READ, 0, windowProcessID)
+        If processHandle Then
+            bufferLength = GetProcessImageFileName(processHandle, strBuffer, MAX_PATH)
+            If bufferLength Then
+                strBuffer = Left$(strBuffer, bufferLength)
+                GetWindowProcessName = strBuffer.Substring(strBuffer.LastIndexOf("\") + 1)
+            End If
+            CloseHandle(processHandle)
+        End If
+        Return GetWindowProcessName
+    End Function
+    Public Function IsHearthstoneActive() As Boolean
+        If Not My.Settings.boolHearthActive Then Return True
+        Try
+            Dim fgHwnd As Double = GetForegroundWindow()
+            Dim fgProcessName As String = GetWindowProcessName(fgHwnd)
+            If fgProcessName = "Hearthstone.exe" Then
+                Return True
+            End If
+        Catch ex As Exception
+            Return True
+        End Try
+        Return False
+    End Function 'Checks if the hearthstone window is active
 End Class
 
