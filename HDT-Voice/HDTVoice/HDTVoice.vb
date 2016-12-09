@@ -4,6 +4,7 @@ Imports System.Windows.Controls
 Imports System.Windows.Forms
 Imports System.ComponentModel
 Imports System.Drawing
+Imports HearthDb.Enums
 
 Imports Hearthstone_Deck_Tracker
 Imports Hearthstone_Deck_Tracker.API
@@ -37,7 +38,7 @@ Public Class HDTVoice
     Private swDebugLog As IO.StreamWriter                    ' Debug log writer
 
     'Overlay elements
-    Private canvasOverlay As Canvas = Core.OverlayCanvas     ' The main overlay object
+    Private canvasOverlay As Canvas = API.Core.OverlayCanvas    ' The main overlay object
     Private rectStatusBG As Rectangle = Nothing
 
     Private intPlayerID As Integer = 0
@@ -51,7 +52,7 @@ Public Class HDTVoice
         Get
             ' Clone entities from game and return as array
             Try
-                Dim EntArray = Helper.DeepClone(Core.Game.Entities).Values.ToArray
+                Dim EntArray = Helper.DeepClone(Hearthstone_Deck_Tracker.Core.Game.Entities).Values.ToArray
                 Return EntArray
             Catch ex As Exception
                 Return Nothing
@@ -78,6 +79,24 @@ Public Class HDTVoice
             End Try
         End Get
     End Property      ' The opponent entity
+
+    Public Property CanvasOverlay1 As Canvas
+        Get
+            Return canvasOverlay
+        End Get
+        Set(value As Canvas)
+            canvasOverlay = value
+        End Set
+    End Property
+
+    Public Property CanvasOverlay2 As Canvas
+        Get
+            Return canvasOverlay
+        End Get
+        Set(value As Canvas)
+            canvasOverlay = value
+        End Set
+    End Property
 
     'Main functions
     Public Sub Load()
@@ -138,7 +157,7 @@ Public Class HDTVoice
         workerHotkey.RunWorkerAsync()       ' Start listening for hotkey
         workerActions.RunWorkerAsync()      ' Start action processor
 
-        If canvasOverlay.ActualWidth > 500 Then
+        If CanvasOverlay1.ActualWidth > 500 Then
             If My.Settings.boolToggleOrPtt Then ' Push to talk enabled, don't start listening
                 sreListen = False
                 PopupNotification("Speech recognition enabled (push-to-talk)", 4000)
@@ -167,12 +186,12 @@ Public Class HDTVoice
 
         ' Update player and opponent entities
         If Not IsNothing(PlayerEntity) Then
-            intPlayerID = PlayerEntity.GetTag(GAME_TAG.CONTROLLER)
+            intPlayerID = PlayerEntity.GetTag(GameTag.CONTROLLER)
             writeLog("Updated player ID to {0}", intPlayerID)
         End If
 
         If Not IsNothing(OpponentEntity) Then
-            intOpponentID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
+            intOpponentID = OpponentEntity.GetTag(GameTag.CONTROLLER)
             writeLog("Updated opponent ID to {0}", intOpponentID)
         End If
 
@@ -184,7 +203,7 @@ Public Class HDTVoice
         recogVoice.RequestRecognizerUpdate()
     End Sub ' Request the SpeechRecognitionEngine update asynchronously
     Public Sub onSpeechRecognized(sender As Object, e As SpeechRecognizedEventArgs) Handles recogVoice.SpeechRecognized
-        If Not Core.Game.IsRunning Then
+        If Not Hearthstone_Deck_Tracker.Core.Game.IsRunning Then
             Return
         End If
 
@@ -212,7 +231,7 @@ Public Class HDTVoice
 
     End Sub ' Handles processing recognized speech input
     Public Sub onRecognizerUpdateReached(sender As Object, e As RecognizerUpdateReachedEventArgs) Handles recogVoice.RecognizerUpdateReached
-        If Not Core.Game.IsRunning Then
+        If Not Hearthstone_Deck_Tracker.Core.Game.IsRunning Then
             writeLog("Tried to update recog but game not running!")
             Exit Sub ' do nothing if the game is not running
         End If
@@ -220,7 +239,7 @@ Public Class HDTVoice
         boolUpdating = True
         recogVoice.UnloadAllGrammars()
 
-        If Core.Game.IsInMenu Then
+        If Hearthstone_Deck_Tracker.Core.Game.IsInMenu Then
             Dim mG = GrammarEngine.MenuGrammar
             recogVoice.LoadGrammar(mG)
             boolUpdating = False
@@ -231,7 +250,7 @@ Public Class HDTVoice
             onNewGame()
         End If
 
-        If Not Core.Game.IsMulliganDone Then
+        If Not Hearthstone_Deck_Tracker.Core.Game.IsMulliganDone Then
             recogVoice.LoadGrammar(GrammarEngine.MulliganGrammar)
             boolUpdating = False
             Return
@@ -261,11 +280,11 @@ Public Class HDTVoice
         Dim pttHotkey = Keys.LShiftKey
         Do
             ' Check if the game is running and stop/start recognition as necessary
-            If Not Core.Game.IsRunning Then
+            If Not Hearthstone_Deck_Tracker.Core.Game.IsRunning Then
                 writeLog("Hearthstone not running, stopping recognizer...")
                 sreListen = False
                 recogVoice.RecognizeAsyncCancel()
-                Do Until Core.Game.IsRunning
+                Do Until Hearthstone_Deck_Tracker.Core.Game.IsRunning
                     Sleep(1000)
                 Loop
                 writeLog("Hearthstone started, starting recognizer...")
@@ -402,7 +421,7 @@ Public Class HDTVoice
         Loop
     End Sub ' A background worker that loops, continuously processing any actions in the action list
     Public Sub ProcessAction(e As SpeechRecognizedEventArgs)
-        If e.Result.Semantics.ContainsKey("menu") And Core.Game.IsInMenu Then
+        If e.Result.Semantics.ContainsKey("menu") And Hearthstone_Deck_Tracker.Core.Game.IsInMenu Then
             doMenu(e)
         End If
 
@@ -413,7 +432,7 @@ Public Class HDTVoice
                     Mouse.SendClick(Mouse.Buttons.Left)
                 Else
                     Dim cardEntity = GrammarEngine.GetEntityFromSemantic(e.Result.Semantics("mulligan").Value)
-                    Dim targetNum = cardEntity.GetTag(GAME_TAG.ZONE_POSITION)
+                    Dim targetNum = cardEntity.GetTag(GameTag.ZONE_POSITION)
                     Mouse.MoveToMulligan(targetNum)
                     Mouse.SendClick(Mouse.Buttons.Left)
                 End If
@@ -725,7 +744,7 @@ Public Class HDTVoice
         Else
             'Play card with target
             Dim TargetEntity As Entity = GrammarEngine.GetEntityFromSemantic(SemanticTarget)
-            If TargetEntity.GetTag(GAME_TAG.CONTROLLER) = intPlayerID And TargetEntity.IsMinion And cardEntity.IsMinion Then
+            If TargetEntity.GetTag(GameTag.CONTROLLER) = intPlayerID And TargetEntity.IsMinion And cardEntity.IsMinion Then
                 ' pLay to left of minion
                 Mouse.DragToTarget(SemanticCard, SemanticTarget, -5)
             Else

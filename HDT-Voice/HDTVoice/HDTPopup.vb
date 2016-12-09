@@ -13,7 +13,7 @@ Public Class HDTPopup
         popupText = Text
         popupDuration = Duration
 
-        hdtCanvas = Core.OverlayCanvas
+        hdtCanvas = API.Core.OverlayCanvas
         ' Invoke popup from main canvas
         hdtCanvas.Dispatcher.Invoke(AddressOf InvokePopup)
     End Sub

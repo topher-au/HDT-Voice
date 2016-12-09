@@ -1,9 +1,11 @@
 ﻿Imports System.Speech.Recognition
+Imports HearthDb.CardDefs
+Imports HearthDb.Enums
 Imports Hearthstone_Deck_Tracker
 Imports Hearthstone_Deck_Tracker.Hearthstone
 Imports Hearthstone_Deck_Tracker.API
 Imports Hearthstone_Deck_Tracker.Enums
-Imports Hearthstone_Deck_Tracker.Hearthstone.Entities
+
 Public Class HDTGrammarEngine
 
     Private friendlyID As Integer = 0
@@ -238,7 +240,7 @@ Public Class HDTGrammarEngine
     End Function
 
     Private Function FriendlyHandChoices(Optional AddCard As Boolean = True) As Choices
-        Dim cardHand As List(Of Entity) = GetCardsInHand()
+        Dim cardHand As List(Of Entities.Entity) = GetCardsInHand()
 
         Dim handChoices As Choices = CreateChoicesFromEntities(cardHand)
 
@@ -374,32 +376,32 @@ Public Class HDTGrammarEngine
         opposingID = Nothing
 
         If Not IsNothing(PlayerEntity) And Not IsNothing(OpponentEntity) Then
-            friendlyID = PlayerEntity.GetTag(GAME_TAG.CONTROLLER)
-            opposingID = OpponentEntity.GetTag(GAME_TAG.CONTROLLER)
+            friendlyID = PlayerEntity.GetTag(GameTag.CONTROLLER)
+            opposingID = OpponentEntity.GetTag(GameTag.CONTROLLER)
         End If
     End Sub                                     ' Re-initalizes controller IDs
-    Private Function GetCardsInHand() As List(Of Entity)
+    Private Function GetCardsInHand() As List(Of Entities.Entity)
         CheckGameState()
 
-        Dim CardsInHand As New List(Of Entity)
+        Dim CardsInHand As New List(Of Entities.Entity)
 
         For Each e In Entities
-            If e.IsInHand And e.GetTag(GAME_TAG.CONTROLLER) = friendlyID Then
+            If e.IsInHand And e.GetTag(GameTag.CONTROLLER) = friendlyID Then
                 ' If entity is in player hand then add to list
                 CardsInHand.Add(e)
             End If
         Next
 
-        CardsInHand.Sort(Function(e1 As Entity, e2 As Entity)
-                             Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
+        CardsInHand.Sort(Function(e1 As Entities.Entity, e2 As Entities.Entity)
+                             Return e1.GetTag(GameTag.ZONE_POSITION).CompareTo(e2.GetTag(GameTag.ZONE_POSITION))
                          End Function)
 
         Return CardsInHand
     End Function           ' Returns an ordered list of the current cards in hand
-    Private Function GetFriendlyMinions() As List(Of Entity)
+    Private Function GetFriendlyMinions() As List(Of Entities.Entity)
         CheckGameState()
 
-        Dim FriendlyMinions As New List(Of Entity)
+        Dim FriendlyMinions As New List(Of Entities.Entity)
 
         For Each e In Entities
             If e.IsInPlay And e.IsMinion And e.IsControlledBy(friendlyID) Then
@@ -407,16 +409,16 @@ Public Class HDTGrammarEngine
             End If
         Next
 
-        FriendlyMinions.Sort(Function(e1 As Entity, e2 As Entity)
-                                 Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
+        FriendlyMinions.Sort(Function(e1 As Entities.Entity, e2 As Entities.Entity)
+                                 Return e1.GetTag(GameTag.ZONE_POSITION).CompareTo(e2.GetTag(GameTag.ZONE_POSITION))
                              End Function)
 
         Return FriendlyMinions
     End Function       ' Returns an ordered list of the current friendly minions
-    Private Function GetOpposingMinions() As List(Of Entity)
+    Private Function GetOpposingMinions() As List(Of Entities.Entity)
         CheckGameState()
 
-        Dim OpposingMinions As New List(Of Entity)
+        Dim OpposingMinions As New List(Of Entities.Entity)
 
         For Each e In Entities
             If e.IsInPlay And e.IsMinion And e.IsControlledBy(opposingID) Then
@@ -424,8 +426,8 @@ Public Class HDTGrammarEngine
             End If
         Next
 
-        OpposingMinions.Sort(Function(e1 As Entity, e2 As Entity)
-                                 Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
+        OpposingMinions.Sort(Function(e1 As Entities.Entity, e2 As Entities.Entity)
+                                 Return e1.GetTag(GameTag.ZONE_POSITION).CompareTo(e2.GetTag(GameTag.ZONE_POSITION))
                              End Function)
 
         Return OpposingMinions
@@ -434,14 +436,14 @@ Public Class HDTGrammarEngine
         Dim heroChoice = New Choices(New SemanticResultValue("hero power", "hero"))
         'Attempt to read active hero power name
 
-        Dim heroPowerEntity As Entity = Nothing
+        Dim heroPowerEntity As Entities.Entity = Nothing
 
         heroPowerEntity = Entities.FirstOrDefault(Function(x)
-                                                      Dim cardType = x.GetTag(GAME_TAG.CARDTYPE)
-                                                      Dim cardController = x.GetTag(GAME_TAG.CONTROLLER)
+                                                      Dim cardType = x.GetTag(GameTag.CARDTYPE)
+                                                      Dim cardController = x.GetTag(GameTag.CONTROLLER)
                                                       Dim cardInPlay = x.IsInPlay
 
-                                                      If cardType = Hearthstone.TAG_CARDTYPE.HERO_POWER And
+                                                      If cardType = GameTag.HERO_POWER And
                                                                 cardController = friendlyID And
                                                                 x.IsInPlay = True Then _
                                                                     Return True
@@ -468,7 +470,7 @@ Public Class HDTGrammarEngine
             StartNewGame()
         End If
     End Sub
-    Public Function GetEntityFromSemantic(SemanticValue As String) As Entity
+    Public Function GetEntityFromSemantic(SemanticValue As String) As Entities.Entity
         ' The Semantic Value is HDT-Voice's shorthand way of naming entities, this is used
         ' to allow numbered minion and card usage without attaching the numbers to a specific
         ' entity, hopefully resolving some issues with the game selecting the wrong entity.
@@ -476,7 +478,7 @@ Public Class HDTGrammarEngine
         ' Typically in format: C1 = Card1, F7 = Friendly minion 7, E18 = entity 18, etc.
 
 
-        Dim finalEntity As Entity
+        Dim finalEntity As Entities.Entity
 
         'Check if just an entity ID was passed and return if so
         If IsNumeric(SemanticValue) Then
@@ -506,13 +508,13 @@ Public Class HDTGrammarEngine
 
         Return finalEntity
     End Function ' Resolves a semantic value provided by the grammar engine to an entity
-    Private Function CreateChoicesFromEntities(EntityList As List(Of Entity)) As Choices
+    Private Function CreateChoicesFromEntities(EntityList As List(Of Entities.Entity)) As Choices
         CheckGameState()
 
         ' Get a list of current cards
         Dim entityChoices As New Choices
 
-        Dim newEntities As List(Of Entity) = EntityList.ToList
+        Dim newEntities As List(Of Entities.Entity) = EntityList.ToList
 
 
         If newEntities.Count > 0 Then
@@ -560,14 +562,14 @@ Public Class HDTGrammarEngine
         Return finalChoices
     End Function
 
-    Private ReadOnly Property Entities As Entity()
+    Private ReadOnly Property Entities As Entities.Entity()
         Get
             ' Clone entities from game and return as array
-            Dim EntArray = Helper.DeepClone(Core.Game.Entities).Values.ToArray
+            Dim EntArray = Helper.DeepClone(Hearthstone_Deck_Tracker.Core.Game.Entities).Values.ToArray
             Return EntArray
         End Get
     End Property                ' Clones Entites from HDT and creates an array
-    Private ReadOnly Property PlayerEntity As Entity
+    Private ReadOnly Property PlayerEntity As Entities.Entity
         Get
             ' Return the Entity representing the player
             Try
@@ -577,7 +579,7 @@ Public Class HDTGrammarEngine
             End Try
         End Get
     End Property              ' Gets the player's current Entity
-    Private ReadOnly Property OpponentEntity As Entity
+    Private ReadOnly Property OpponentEntity As Entities.Entity
         Get
             ' Return the Entity representing the player
             Try

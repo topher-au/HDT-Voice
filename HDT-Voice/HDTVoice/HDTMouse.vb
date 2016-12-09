@@ -5,6 +5,7 @@ Imports Hearthstone_Deck_Tracker.Hearthstone.Entities
 Imports System.Threading.Thread
 Imports System.Windows.Forms
 Imports System.Drawing
+Imports HearthDb.Enums
 
 Public Class Mouse
     Private Declare Function GetForegroundWindow Lib "user32" () As System.IntPtr
@@ -38,14 +39,14 @@ Public Class Mouse
         OpponentID = Nothing
 
         If Not IsNothing(player) Then _
-            PlayerID = player.GetTag(GAME_TAG.CONTROLLER)
+            PlayerID = player.GetTag(GameTag.CONTROLLER)
         If Not IsNothing(opponent) Then _
-            OpponentID = opponent.GetTag(GAME_TAG.CONTROLLER)
+            OpponentID = opponent.GetTag(GameTag.CONTROLLER)
     End Sub
     Private ReadOnly Property Entities As Entity()
         Get
             ' Clone entities from game and return as array
-            Dim EntArray = Helper.DeepClone(Core.Game.Entities).Values.ToArray
+            Dim EntArray = Helper.DeepClone(Hearthstone_Deck_Tracker.Core.Game.Entities).Values.ToArray
             Return EntArray
         End Get
     End Property                 ' The list of entities for the current game
@@ -64,14 +65,14 @@ Public Class Mouse
         Dim CardsInHand As New List(Of Entity)
 
         For Each e In Entities
-            If e.IsInHand And e.GetTag(GAME_TAG.CONTROLLER) = PlayerID Then
+            If e.IsInHand And e.GetTag(GameTag.CONTROLLER) = PlayerID Then
                 ' If entity is in player hand then add to list
                 CardsInHand.Add(e)
             End If
         Next
 
         CardsInHand.Sort(Function(e1 As Entity, e2 As Entity)
-                             Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
+                             Return e1.GetTag(GameTag.ZONE_POSITION).CompareTo(e2.GetTag(GameTag.ZONE_POSITION))
                          End Function)
 
         Return CardsInHand
@@ -86,7 +87,7 @@ Public Class Mouse
         Next
 
         FriendlyMinions.Sort(Function(e1 As Entity, e2 As Entity)
-                                 Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
+                                 Return e1.GetTag(GameTag.ZONE_POSITION).CompareTo(e2.GetTag(GameTag.ZONE_POSITION))
                              End Function)
 
         Return FriendlyMinions
@@ -101,7 +102,7 @@ Public Class Mouse
         Next
 
         OpposingMinions.Sort(Function(e1 As Entity, e2 As Entity)
-                                 Return e1.GetTag(GAME_TAG.ZONE_POSITION).CompareTo(e2.GetTag(GAME_TAG.ZONE_POSITION))
+                                 Return e1.GetTag(GameTag.ZONE_POSITION).CompareTo(e2.GetTag(GameTag.ZONE_POSITION))
                              End Function)
 
         Return OpposingMinions
@@ -140,8 +141,8 @@ Public Class Mouse
         Dim boardOpposing = GetOpposingMinions()
 
         'First, check if the entity is a card in our hand
-        If targetEntity.IsInHand And targetEntity.GetTag(GAME_TAG.CONTROLLER) = PlayerID Then
-            Dim cardNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
+        If targetEntity.IsInHand And targetEntity.GetTag(GameTag.CONTROLLER) = PlayerID Then
+            Dim cardNum As Integer = targetEntity.GetTag(GameTag.ZONE_POSITION)
             Dim totalCards As Integer = handCards.Count
             Dim handwidth = If(totalCards < 4, 10 * totalCards, 38)
 
@@ -152,8 +153,8 @@ Public Class Mouse
         End If
 
         'Next, check whether it is a friendly minion
-        If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GAME_TAG.CONTROLLER) = PlayerID Then
-            Dim minionNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
+        If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GameTag.CONTROLLER) = PlayerID Then
+            Dim minionNum As Integer = targetEntity.GetTag(GameTag.ZONE_POSITION)
             Dim totalMinions As Integer = boardFriendly.Count
             Dim minionWidth As Double = 29 / 3
             Dim totalWidth As Double = totalMinions * minionWidth
@@ -165,8 +166,8 @@ Public Class Mouse
         End If
 
         'Then, check whether it is an opposing minion
-        If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GAME_TAG.CONTROLLER) = OpponentID Then
-            Dim minionNum As Integer = targetEntity.GetTag(GAME_TAG.ZONE_POSITION)
+        If targetEntity.IsInPlay And targetEntity.IsMinion And targetEntity.GetTag(GameTag.CONTROLLER) = OpponentID Then
+            Dim minionNum As Integer = targetEntity.GetTag(GameTag.ZONE_POSITION)
             Dim totalMinions As Integer = boardOpposing.Count
             Dim minionWidth As Double = 29 / 3
             Dim totalWidth As Double = totalMinions * minionWidth
@@ -192,7 +193,7 @@ Public Class Mouse
 
     End Sub
     Public Sub MoveToMulligan(cardNum As Integer)
-        If Core.Game.OpponentHasCoin Then
+        If API.Core.Game.Opponent.HasCoin Then
             Dim optionSize As Integer = 24.5
             Dim optionsWidth As Integer = 3 * optionSize
             Dim myOption As Double = (cardNum * optionSize) - (optionSize / 2)

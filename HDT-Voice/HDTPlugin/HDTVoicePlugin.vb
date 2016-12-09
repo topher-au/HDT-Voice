@@ -109,7 +109,7 @@ Public Class HDTVoicePlugin
     End Sub
     Public Sub ClickMenuItem()
         Dim optionsFlyout As Flyout
-        For Each f As Flyout In FindVisualChildren(Of Flyout)(Helper.MainWindow)
+        For Each f As Flyout In FindVisualChildren(Of Flyout)(Core.mainWindow)
             If Not f Is Nothing Then
                 If f.Name = "FlyoutOptions" Then
                     optionsFlyout = f
@@ -158,16 +158,14 @@ Public Class HDTVoicePlugin
     Public Sub CreateUpdateNews()
         ' Checks for an update and adds a news item if there wasn't one
         Dim gh As New Github
-        Logger.WriteLine("Checking for HDT-Voice update...")
         Dim newVer = gh.CheckForUpdate("topher-au", "HDT-Voice", HDTVoicePlugin.PluginVersion)
         If Not IsNothing(newVer) Then
-            Logger.WriteLine("New version found!")
             Dim newsBar As StatusBar = Nothing
 
             Dim TopRow As RowDefinition = Nothing
             Dim StatusBarNews As StatusBar = Nothing
 
-            For Each item In FindVisualChildren(Of Grid)(Helper.MainWindow)
+            For Each item In FindVisualChildren(Of Grid)(Core.MainWindow)
                 For Each rd In item.RowDefinitions
                     If Not IsNothing(rd.Name) Then
                         If Not rd.Name.Trim = String.Empty Then
@@ -180,7 +178,7 @@ Public Class HDTVoicePlugin
 
             Next
 
-            For Each item In FindVisualChildren(Of StatusBar)(Helper.MainWindow)
+            For Each item In FindVisualChildren(Of StatusBar)(Core.MainWindow)
                 If Not IsNothing(item.Name) Then
                     If item.Name = "StatusBarNews" Then
                         StatusBarNews = item
@@ -220,7 +218,7 @@ Public Class HDTVoicePlugin
             configMain.buttonUpdate.Content = String.Format("Version {0} Now Available", newVer.tag_name)
             configMain.buttonUpdate.Visibility = System.Windows.Visibility.Visible
         Else
-            Logger.WriteLine("No newer version found.")
+            
             configMain.buttonUpdate.Visibility = System.Windows.Visibility.Hidden
             createdUpdateNews = True
         End If
